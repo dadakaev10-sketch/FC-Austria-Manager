@@ -6,12 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useClubStore } from '@/stores/club-store';
-import { createTeamInDb, fetchClubStaff } from '@/lib/supabase/teams';
-import { isDemoMode } from '@/lib/demo-data';
+import { updateTeamInDb, fetchClubStaff } from '@/lib/supabase/teams';
+import type { Team } from '@/types/database';
 
-interface CreateTeamModalProps {
+interface EditTeamModalProps {
   isOpen: boolean;
   onClose: () => void;
+  team: Team | null;
   onSuccess?: () => void;
 }
 
@@ -33,7 +34,7 @@ const SEASON_OPTIONS = [
   { value: '2026/2027', label: '2026/2027' },
 ];
 
-export function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTeamModalProps) {
+export function EditTeamModal({ isOpen, onClose, team, onSuccess }: EditTeamModalProps) {
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [season, setSeason] = useState('');
@@ -45,49 +46,42 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTeamModalP
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch real staff when modal opens
+  // Pre-fill form when team changes
   useEffect(() => {
-    if (!isOpen || isDemoMode()) return;
+    if (team) {
+      setName(team.name || '');
+      setCategory(team.category || '');
+      setSeason(team.season || '');
+      setCoachId(team.coach_id || '');
+      setAssistantCoachId(team.assistant_coach_id || '');
+    }
+  }, [team]);
+
+  // Fetch staff when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
     const clubId = useClubStore.getState().currentClub?.id;
     if (!clubId) return;
 
     fetchClubStaff(clubId).then(({ data }) => {
       if (data) {
         setStaffOptions([
-          { value: '', label: 'Trainer wählen' },
+          { value: '', label: 'Kein Trainer' },
           ...data.map((p) => ({ value: p.id, label: p.full_name })),
         ]);
       }
     });
   }, [isOpen]);
 
-  const resetForm = () => {
-    setName('');
-    setCategory('');
-    setSeason('');
-    setCoachId('');
-    setAssistantCoachId('');
-    setError(null);
-  };
-
-  const handleClose = () => {
-    resetForm();
-    onClose();
-  };
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !category || !season) return;
+    if (!team || !name.trim() || !category || !season) return;
 
     setIsSubmitting(true);
     setError(null);
 
     try {
-      const clubId = useClubStore.getState().currentClub?.id;
-      if (!clubId) throw new Error('Kein Verein ausgewählt');
-
-      const { data, error: dbError } = await createTeamInDb({
-        club_id: clubId,
+      const { data, error: dbError } = await updateTeamInDb(team.id, {
         name: name.trim(),
         category,
         season,
@@ -97,20 +91,20 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTeamModalP
 
       if (dbError) throw dbError;
       if (data) {
-        useClubStore.getState().addTeam(data);
+        useClubStore.getState().updateTeam(team.id, data);
       }
 
-      handleClose();
+      onClose();
       onSuccess?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Team konnte nicht erstellt werden');
+      setError(err instanceof Error ? err.message : 'Team konnte nicht aktualisiert werden');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Team erstellen" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title="Team bearbeiten" size="lg">
       <form onSubmit={handleSubmit} className="space-y-5">
         {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -119,16 +113,15 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTeamModalP
         )}
 
         <Input
-          id="team-name"
+          id="edit-team-name"
           label="Teamname"
-          placeholder="z.B. U12 Entwicklung"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
         />
 
         <Select
-          id="team-category"
+          id="edit-team-category"
           label="Kategorie"
           options={CATEGORY_OPTIONS}
           value={category}
@@ -137,7 +130,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTeamModalP
         />
 
         <Select
-          id="team-season"
+          id="edit-team-season"
           label="Saison"
           options={SEASON_OPTIONS}
           value={season}
@@ -146,7 +139,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTeamModalP
         />
 
         <Select
-          id="team-coach"
+          id="edit-team-coach"
           label="Cheftrainer"
           options={staffOptions}
           value={coachId}
@@ -154,7 +147,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTeamModalP
         />
 
         <Select
-          id="team-assistant-coach"
+          id="edit-team-assistant-coach"
           label="Co-Trainer"
           options={staffOptions}
           value={assistantCoachId}
@@ -162,11 +155,11 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTeamModalP
         />
 
         <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
-          <Button type="button" variant="outline" onClick={handleClose}>
+          <Button type="button" variant="outline" onClick={onClose}>
             Abbrechen
           </Button>
           <Button type="submit" disabled={isSubmitting || !name.trim() || !category || !season}>
-            {isSubmitting ? 'Wird erstellt...' : 'Team erstellen'}
+            {isSubmitting ? 'Wird gespeichert...' : 'Speichern'}
           </Button>
         </div>
       </form>

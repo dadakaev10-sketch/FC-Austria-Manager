@@ -1,12 +1,19 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { PlayerStatsBar } from '@/components/players/player-stats-bar';
+import { EditPlayerModal } from '@/components/players/edit-player-modal';
+import { DeletePlayerDialog } from '@/components/players/delete-player-dialog';
+import { EditPlayerStatsModal } from '@/components/players/edit-player-stats-modal';
+import { useAuthStore } from '@/stores/auth-store';
+import { fetchPlayerDetail, fetchPlayerRatings } from '@/lib/supabase/players';
+import { isDemoMode } from '@/lib/demo-data';
 import { calculateAge, getPositionAbbreviation, formatDate } from '@/lib/utils';
 import {
   ArrowLeft,
@@ -19,363 +26,167 @@ import {
   Calendar,
   BarChart3,
   TrendingUp,
+  Pencil,
+  Trash2,
+  Loader2,
 } from 'lucide-react';
-
-// ---------------------------------------------------------------------------
-// Mock data -- will be replaced with real Supabase queries
-// ---------------------------------------------------------------------------
-
-const MOCK_PLAYERS: Record<
-  string,
-  {
-    id: string;
-    name: string;
-    team: string;
-    team_id: string;
-    position: string;
-    jersey_number: number;
-    date_of_birth: string;
-    photo_url: string | null;
-    height: number | null;
-    weight: number | null;
-    preferred_foot: 'left' | 'right' | 'both';
-    contact_email: string | null;
-    contact_phone: string | null;
-    parent_name: string | null;
-    parent_email: string | null;
-    parent_phone: string | null;
-    stats: {
-      speed: number;
-      stamina: number;
-      technique: number;
-      passing: number;
-      shooting: number;
-      dribbling: number;
-      defense: number;
-      tactical_understanding: number;
-    };
-  }
-> = {
-  p1: {
-    id: 'p1',
-    name: 'Lucas Fernandez',
-    team: 'U12 Development',
-    team_id: '2',
-    position: 'goalkeeper',
-    jersey_number: 1,
-    date_of_birth: '2014-03-15',
-    photo_url: null,
-    height: 152,
-    weight: 42,
-    preferred_foot: 'right',
-    contact_email: 'lucas.f@email.com',
-    contact_phone: '+1 555-201-0001',
-    parent_name: 'Maria Fernandez',
-    parent_email: 'maria.fernandez@email.com',
-    parent_phone: '+1 555-201-0010',
-    stats: {
-      speed: 62,
-      stamina: 70,
-      technique: 68,
-      passing: 55,
-      shooting: 30,
-      dribbling: 40,
-      defense: 75,
-      tactical_understanding: 72,
-    },
-  },
-  p2: {
-    id: 'p2',
-    name: 'Daniel Kim',
-    team: 'U12 Development',
-    team_id: '2',
-    position: 'right-back',
-    jersey_number: 2,
-    date_of_birth: '2014-07-22',
-    photo_url: null,
-    height: 148,
-    weight: 39,
-    preferred_foot: 'right',
-    contact_email: 'daniel.k@email.com',
-    contact_phone: '+1 555-201-0002',
-    parent_name: 'Jun Kim',
-    parent_email: 'jun.kim@email.com',
-    parent_phone: '+1 555-201-0020',
-    stats: {
-      speed: 78,
-      stamina: 75,
-      technique: 60,
-      passing: 62,
-      shooting: 35,
-      dribbling: 55,
-      defense: 72,
-      tactical_understanding: 65,
-    },
-  },
-  p9: {
-    id: 'p9',
-    name: 'Mateo Rodriguez',
-    team: 'First Team',
-    team_id: '5',
-    position: 'striker',
-    jersey_number: 9,
-    date_of_birth: '2006-08-08',
-    photo_url: null,
-    height: 178,
-    weight: 72,
-    preferred_foot: 'left',
-    contact_email: 'mateo.r@email.com',
-    contact_phone: '+1 555-201-0009',
-    parent_name: null,
-    parent_email: null,
-    parent_phone: null,
-    stats: {
-      speed: 85,
-      stamina: 78,
-      technique: 82,
-      passing: 70,
-      shooting: 88,
-      dribbling: 80,
-      defense: 35,
-      tactical_understanding: 75,
-    },
-  },
-  p10: {
-    id: 'p10',
-    name: 'Julian Torres',
-    team: 'First Team',
-    team_id: '5',
-    position: 'attacking-midfielder',
-    jersey_number: 10,
-    date_of_birth: '2006-05-25',
-    photo_url: null,
-    height: 175,
-    weight: 68,
-    preferred_foot: 'right',
-    contact_email: 'julian.t@email.com',
-    contact_phone: '+1 555-201-0010',
-    parent_name: null,
-    parent_email: null,
-    parent_phone: null,
-    stats: {
-      speed: 76,
-      stamina: 72,
-      technique: 90,
-      passing: 88,
-      shooting: 75,
-      dribbling: 85,
-      defense: 40,
-      tactical_understanding: 82,
-    },
-  },
-};
-
-// Default player for unknown IDs
-const DEFAULT_PLAYER = {
-  id: 'p1',
-  name: 'Lucas Fernandez',
-  team: 'U12 Development',
-  team_id: '2',
-  position: 'goalkeeper',
-  jersey_number: 1,
-  date_of_birth: '2014-03-15',
-  photo_url: null,
-  height: 152,
-  weight: 42,
-  preferred_foot: 'right' as const,
-  contact_email: 'lucas.f@email.com',
-  contact_phone: '+1 555-201-0001',
-  parent_name: 'Maria Fernandez',
-  parent_email: 'maria.fernandez@email.com',
-  parent_phone: '+1 555-201-0010',
-  stats: {
-    speed: 62,
-    stamina: 70,
-    technique: 68,
-    passing: 55,
-    shooting: 30,
-    dribbling: 40,
-    defense: 75,
-    tactical_understanding: 72,
-  },
-};
-
-const MOCK_RATINGS = [
-  {
-    id: 'r1',
-    date: '2026-02-28',
-    context_type: 'match' as const,
-    context_label: 'vs FC Adler',
-    speed: 7,
-    technique: 8,
-    passing: 6,
-    shooting: 5,
-    defense: 8,
-    tactical_awareness: 7,
-  },
-  {
-    id: 'r2',
-    date: '2026-02-25',
-    context_type: 'training' as const,
-    context_label: 'Passing drill session',
-    speed: 6,
-    technique: 7,
-    passing: 7,
-    shooting: 4,
-    defense: 7,
-    tactical_awareness: 7,
-  },
-  {
-    id: 'r3',
-    date: '2026-02-21',
-    context_type: 'match' as const,
-    context_label: 'vs SC Falken',
-    speed: 7,
-    technique: 7,
-    passing: 6,
-    shooting: 6,
-    defense: 9,
-    tactical_awareness: 8,
-  },
-  {
-    id: 'r4',
-    date: '2026-02-18',
-    context_type: 'training' as const,
-    context_label: 'Fitness assessment',
-    speed: 7,
-    technique: 7,
-    passing: 6,
-    shooting: 5,
-    defense: 8,
-    tactical_awareness: 7,
-  },
-  {
-    id: 'r5',
-    date: '2026-02-14',
-    context_type: 'match' as const,
-    context_label: 'vs SV Stern',
-    speed: 6,
-    technique: 8,
-    passing: 7,
-    shooting: 5,
-    defense: 7,
-    tactical_awareness: 6,
-  },
-];
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function getContextBadgeVariant(contextType: 'training' | 'match') {
-  return contextType === 'match' ? ('info' as const) : ('success' as const);
-}
-
-// ---------------------------------------------------------------------------
-// Page
-// ---------------------------------------------------------------------------
 
 export default function PlayerDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const playerId = params.id as string;
+  const { hasRole } = useAuthStore();
 
-  // TODO: Fetch player data from Supabase using playerId
-  const player = MOCK_PLAYERS[playerId] || DEFAULT_PLAYER;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [player, setPlayer] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [ratings, setRatings] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const statEntries = [
-    { label: 'Speed', value: player.stats.speed },
-    { label: 'Stamina', value: player.stats.stamina },
-    { label: 'Technique', value: player.stats.technique },
-    { label: 'Passing', value: player.stats.passing },
-    { label: 'Shooting', value: player.stats.shooting },
-    { label: 'Dribbling', value: player.stats.dribbling },
-    { label: 'Defense', value: player.stats.defense },
-    { label: 'Tactical Understanding', value: player.stats.tactical_understanding },
-  ];
+  // Modals
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isStatsOpen, setIsStatsOpen] = useState(false);
+
+  const canManage = hasRole(['admin', 'club_manager', 'coach']);
+
+  const loadData = async () => {
+    if (isDemoMode()) {
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    const [playerRes, ratingsRes] = await Promise.all([
+      fetchPlayerDetail(playerId),
+      fetchPlayerRatings(playerId),
+    ]);
+    if (playerRes.data) setPlayer(playerRes.data);
+    if (ratingsRes.data) setRatings(ratingsRes.data);
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [playerId]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
+
+  if (!player) {
+    return (
+      <div className="space-y-4">
+        <Link href="/players" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
+          <ArrowLeft className="h-4 w-4" />
+          Zurück zu Spieler
+        </Link>
+        <div className="py-20 text-center">
+          <h2 className="text-lg font-semibold text-gray-900">Spieler nicht gefunden</h2>
+          <p className="mt-1 text-sm text-gray-500">Dieser Spieler existiert nicht oder wurde gelöscht.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Extract stats (Supabase returns array for one-to-many, even if unique)
+  const stats = Array.isArray(player.stats) ? player.stats[0] ?? null : player.stats ?? null;
+  const teamName = player.team?.name || '-';
+
+  const statEntries = stats
+    ? [
+        { label: 'Schnelligkeit', value: stats.speed },
+        { label: 'Ausdauer', value: stats.stamina },
+        { label: 'Technik', value: stats.technique },
+        { label: 'Passspiel', value: stats.passing },
+        { label: 'Schuss', value: stats.shooting },
+        { label: 'Dribbling', value: stats.dribbling },
+        { label: 'Verteidigung', value: stats.defense },
+        { label: 'Taktik', value: stats.tactical_understanding },
+      ]
+    : [];
 
   return (
     <div className="space-y-6">
       {/* Back link */}
-      <Link
-        href="/players"
-        className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
-      >
+      <Link href="/players" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
         <ArrowLeft className="h-4 w-4" />
-        Back to Players
+        Zurück zu Spieler
       </Link>
 
       {/* Player profile card */}
       <Card>
         <CardContent className="py-6">
           <div className="flex flex-col gap-6 sm:flex-row">
-            {/* Photo & basic info */}
             <div className="flex flex-col items-center sm:items-start">
-              <Avatar
-                src={player.photo_url}
-                name={player.name}
-                size="lg"
-                className="h-24 w-24 text-2xl"
-              />
+              <Avatar src={player.photo_url} name={player.name} size="lg" className="h-24 w-24 text-2xl" />
             </div>
 
-            {/* Details */}
             <div className="flex-1 space-y-4">
-              <div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="text-2xl font-bold text-gray-900">
-                    {player.name}
-                  </h1>
-                  <Badge variant="info">
-                    {getPositionAbbreviation(player.position)}
-                  </Badge>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h1 className="text-2xl font-bold text-gray-900">{player.name}</h1>
+                    {player.position && (
+                      <Badge variant="info">{getPositionAbbreviation(player.position)}</Badge>
+                    )}
+                  </div>
+                  <p className="mt-1 text-sm text-gray-500">{teamName}</p>
                 </div>
-                <p className="mt-1 text-sm text-gray-500">{player.team}</p>
+
+                {canManage && (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setIsEditOpen(true)}>
+                      <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                      Bearbeiten
+                    </Button>
+                    <Button variant="danger" size="sm" onClick={() => setIsDeleteOpen(true)}>
+                      <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                      Löschen
+                    </Button>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
-                <div className="flex items-center gap-2 text-sm">
-                  <Shirt className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-500">Jersey</span>
-                  <span className="font-semibold text-gray-900">
-                    #{player.jersey_number}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-500">Age</span>
-                  <span className="font-semibold text-gray-900">
-                    {calculateAge(player.date_of_birth)}
-                  </span>
-                </div>
-
+                {player.jersey_number != null && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Shirt className="h-4 w-4 text-gray-400" />
+                    <span className="text-gray-500">Trikot</span>
+                    <span className="font-semibold text-gray-900">#{player.jersey_number}</span>
+                  </div>
+                )}
+                {player.date_of_birth && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="h-4 w-4 text-gray-400" />
+                    <span className="text-gray-500">Alter</span>
+                    <span className="font-semibold text-gray-900">{calculateAge(player.date_of_birth)}</span>
+                  </div>
+                )}
                 {player.height && (
                   <div className="flex items-center gap-2 text-sm">
                     <Ruler className="h-4 w-4 text-gray-400" />
-                    <span className="text-gray-500">Height</span>
-                    <span className="font-semibold text-gray-900">
-                      {player.height} cm
-                    </span>
+                    <span className="text-gray-500">Größe</span>
+                    <span className="font-semibold text-gray-900">{player.height} cm</span>
                   </div>
                 )}
-
                 {player.weight && (
                   <div className="flex items-center gap-2 text-sm">
                     <Weight className="h-4 w-4 text-gray-400" />
-                    <span className="text-gray-500">Weight</span>
-                    <span className="font-semibold text-gray-900">
-                      {player.weight} kg
-                    </span>
+                    <span className="text-gray-500">Gewicht</span>
+                    <span className="font-semibold text-gray-900">{player.weight} kg</span>
                   </div>
                 )}
-
-                <div className="flex items-center gap-2 text-sm">
-                  <Footprints className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-500">Foot</span>
-                  <span className="font-semibold capitalize text-gray-900">
-                    {player.preferred_foot}
-                  </span>
-                </div>
+                {player.preferred_foot && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Footprints className="h-4 w-4 text-gray-400" />
+                    <span className="text-gray-500">Fuß</span>
+                    <span className="font-semibold capitalize text-gray-900">{player.preferred_foot}</span>
+                  </div>
+                )}
               </div>
 
               {/* Contact info */}
@@ -394,12 +205,9 @@ export default function PlayerDetailPage() {
                     </span>
                   )}
                 </div>
-
                 {player.parent_name && (
                   <div className="mt-2 text-sm text-gray-400">
-                    <span className="font-medium text-gray-500">
-                      Parent/Guardian:
-                    </span>{' '}
+                    <span className="font-medium text-gray-500">Eltern:</span>{' '}
                     {player.parent_name}
                     {player.parent_email && ` - ${player.parent_email}`}
                     {player.parent_phone && ` - ${player.parent_phone}`}
@@ -414,21 +222,31 @@ export default function PlayerDetailPage() {
       {/* Player Attributes */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-emerald-600" />
-            Player Attributes
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-emerald-600" />
+              Spieler-Attribute
+            </CardTitle>
+            {canManage && (
+              <Button variant="outline" size="sm" onClick={() => setIsStatsOpen(true)}>
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                Stats bearbeiten
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {statEntries.map((stat) => (
-              <PlayerStatsBar
-                key={stat.label}
-                label={stat.label}
-                value={stat.value}
-              />
-            ))}
-          </div>
+          {statEntries.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {statEntries.map((stat) => (
+                <PlayerStatsBar key={stat.label} label={stat.label} value={stat.value} />
+              ))}
+            </div>
+          ) : (
+            <div className="py-8 text-center text-sm text-gray-400">
+              Noch keine Stats vorhanden. Klicke auf &quot;Stats bearbeiten&quot; um zu beginnen.
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -437,93 +255,67 @@ export default function PlayerDetailPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-emerald-600" />
-            Performance Ratings
+            Bewertungen
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 bg-gray-50/50 text-xs font-medium uppercase tracking-wider text-gray-500">
-                  <th className="px-6 py-3">Date</th>
-                  <th className="px-6 py-3">Context</th>
-                  <th className="px-6 py-3">SPD</th>
-                  <th className="px-6 py-3">TEC</th>
-                  <th className="px-6 py-3">PAS</th>
-                  <th className="px-6 py-3">SHO</th>
-                  <th className="px-6 py-3">DEF</th>
-                  <th className="px-6 py-3">TAC</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {MOCK_RATINGS.map((rating) => (
-                  <tr
-                    key={rating.id}
-                    className="transition-colors hover:bg-gray-50"
-                  >
-                    <td className="px-6 py-3 text-gray-600">
-                      {formatDate(rating.date)}
-                    </td>
-                    <td className="px-6 py-3">
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant={getContextBadgeVariant(rating.context_type)}
-                        >
-                          {rating.context_type === 'match'
-                            ? 'Match'
-                            : 'Training'}
-                        </Badge>
-                        <span className="text-gray-600">
-                          {rating.context_label}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-3 font-medium text-gray-900">
-                      {rating.speed}
-                    </td>
-                    <td className="px-6 py-3 font-medium text-gray-900">
-                      {rating.technique}
-                    </td>
-                    <td className="px-6 py-3 font-medium text-gray-900">
-                      {rating.passing}
-                    </td>
-                    <td className="px-6 py-3 font-medium text-gray-900">
-                      {rating.shooting}
-                    </td>
-                    <td className="px-6 py-3 font-medium text-gray-900">
-                      {rating.defense}
-                    </td>
-                    <td className="px-6 py-3 font-medium text-gray-900">
-                      {rating.tactical_awareness}
-                    </td>
+          {ratings.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50/50 text-xs font-medium uppercase tracking-wider text-gray-500">
+                    <th className="px-6 py-3">Datum</th>
+                    <th className="px-6 py-3">Kontext</th>
+                    <th className="px-6 py-3">Notiz</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {ratings.map((rating) => (
+                    <tr key={rating.id} className="transition-colors hover:bg-gray-50">
+                      <td className="px-6 py-3 text-gray-600">
+                        {formatDate(rating.created_at)}
+                      </td>
+                      <td className="px-6 py-3">
+                        <Badge variant={rating.context_type === 'match' ? 'info' : 'success'}>
+                          {rating.context_type === 'match' ? 'Spiel' : 'Training'}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-3 text-gray-600">
+                        {rating.overall_notes || '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="py-8 text-center text-sm text-gray-400">
+              Noch keine Bewertungen vorhanden.
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Development Chart Placeholder */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Development</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <div className="mb-4 rounded-full bg-gray-100 p-4">
-              <TrendingUp className="h-8 w-8 text-gray-400" />
-            </div>
-            <h3 className="mb-1 text-lg font-semibold text-gray-900">
-              Player development chart coming soon
-            </h3>
-            <p className="max-w-sm text-sm text-gray-500">
-              A visual chart showing the player&apos;s progress over time will
-              be available here once Recharts integration is complete.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Modals */}
+      <EditPlayerModal
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        player={player}
+        onSuccess={loadData}
+      />
+      <DeletePlayerDialog
+        isOpen={isDeleteOpen}
+        onClose={() => setIsDeleteOpen(false)}
+        player={player ? { id: player.id, name: player.name } : null}
+        onSuccess={() => router.push('/players')}
+      />
+      <EditPlayerStatsModal
+        isOpen={isStatsOpen}
+        onClose={() => setIsStatsOpen(false)}
+        playerId={playerId}
+        currentStats={stats}
+        onSuccess={loadData}
+      />
     </div>
   );
 }

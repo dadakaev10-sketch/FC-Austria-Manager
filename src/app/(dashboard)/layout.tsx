@@ -75,7 +75,12 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
           .single(),
         supabase
           .from('teams')
-          .select('*')
+          .select(`
+            *,
+            coach:profiles!coach_id(id, full_name),
+            assistant_coach:profiles!assistant_coach_id(id, full_name),
+            players(id)
+          `)
           .eq('club_id', profile.club_id)
           .order('category', { ascending: true }),
       ]);
