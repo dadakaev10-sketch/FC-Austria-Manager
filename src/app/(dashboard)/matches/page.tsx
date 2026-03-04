@@ -77,6 +77,7 @@ export default function MatchesPage() {
   const [formLocation, setFormLocation] = useState('');
   const [formHomeOrAway, setFormHomeOrAway] = useState<'home' | 'away'>('home');
   const [isSaving, setIsSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Filters
   const [teamFilter, setTeamFilter] = useState('');
@@ -143,8 +144,21 @@ export default function MatchesPage() {
 
   // Create match handler
   const handleCreate = async () => {
-    if (!currentClub || !profile || !formTeamId || !formOpponent || !formDate || !formTime)
+    setFormError(null);
+
+    if (!currentClub) {
+      setFormError('Kein Verein ausgewaehlt. Bitte lade die Seite neu.');
       return;
+    }
+    if (!profile) {
+      setFormError('Nicht angemeldet. Bitte lade die Seite neu.');
+      return;
+    }
+    if (!formTeamId || !formOpponent || !formDate || !formTime) {
+      setFormError('Bitte fuelle alle Pflichtfelder (*) aus.');
+      return;
+    }
+
     setIsSaving(true);
     try {
       await matchesService.create({
@@ -169,9 +183,13 @@ export default function MatchesPage() {
       setFormTime('');
       setFormLocation('');
       setFormHomeOrAway('home');
+      setFormError(null);
       setIsAddOpen(false);
     } catch (err) {
       console.error('Fehler beim Erstellen des Spiels:', err);
+      setFormError(
+        err instanceof Error ? err.message : 'Fehler beim Speichern. Bitte versuche es erneut.'
+      );
     } finally {
       setIsSaving(false);
     }
@@ -413,6 +431,12 @@ export default function MatchesPage() {
         size="lg"
       >
         <div className="space-y-4">
+          {formError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {formError}
+            </div>
+          )}
+
           <Select
             label="Mannschaft *"
             options={[
@@ -477,9 +501,7 @@ export default function MatchesPage() {
             </Button>
             <Button
               onClick={handleCreate}
-              disabled={
-                isSaving || !formTeamId || !formOpponent || !formDate || !formTime
-              }
+              disabled={isSaving}
             >
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Speichern
