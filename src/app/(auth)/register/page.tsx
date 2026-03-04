@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Shield } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -8,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,13 +24,14 @@ export default function RegisterPage() {
 
     try {
       const supabase = createClient();
-      const { error: authError } = await supabase.auth.signUp({
+      const { data, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             full_name: fullName,
           },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
@@ -37,9 +40,17 @@ export default function RegisterPage() {
         return;
       }
 
+      // If the user session exists immediately, email confirmation is disabled
+      // → redirect straight to dashboard (onboarding will handle the rest)
+      if (data.session) {
+        router.push('/dashboard');
+        return;
+      }
+
+      // Otherwise, email confirmation is required → show success message
       setSuccess(true);
     } catch {
-      setError('An unexpected error occurred. Please try again.');
+      setError('Ein unerwarteter Fehler ist aufgetreten.');
     } finally {
       setLoading(false);
     }
@@ -54,25 +65,26 @@ export default function RegisterPage() {
           </div>
           <h1 className="mt-4 text-2xl font-bold text-gray-900">FC Manager</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Create your account
+            Erstelle dein Konto
           </p>
         </div>
 
         {success ? (
           <div className="text-center">
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-5 text-sm text-emerald-700">
-              <p className="font-medium">Registration successful!</p>
+              <p className="font-medium">Registrierung erfolgreich!</p>
               <p className="mt-1">
-                Please check your email to confirm your account before signing in.
+                Bitte prüfe deine E-Mails und bestätige dein Konto, bevor du
+                dich einloggst.
               </p>
             </div>
             <p className="mt-6 text-sm text-gray-500">
-              Already confirmed?{' '}
+              Bereits bestätigt?{' '}
               <Link
                 href="/login"
                 className="font-medium text-emerald-600 hover:text-emerald-500"
               >
-                Sign in
+                Jetzt einloggen
               </Link>
             </p>
           </div>
@@ -87,9 +99,9 @@ export default function RegisterPage() {
 
               <Input
                 id="fullName"
-                label="Full name"
+                label="Vollständiger Name"
                 type="text"
-                placeholder="John Doe"
+                placeholder="Max Mustermann"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
@@ -98,9 +110,9 @@ export default function RegisterPage() {
 
               <Input
                 id="email"
-                label="Email address"
+                label="E-Mail-Adresse"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="max@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -109,9 +121,9 @@ export default function RegisterPage() {
 
               <Input
                 id="password"
-                label="Password"
+                label="Passwort"
                 type="password"
-                placeholder="Create a password"
+                placeholder="Mindestens 6 Zeichen"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -125,17 +137,17 @@ export default function RegisterPage() {
                 size="lg"
                 disabled={loading}
               >
-                {loading ? 'Creating account...' : 'Create account'}
+                {loading ? 'Konto wird erstellt...' : 'Konto erstellen'}
               </Button>
             </form>
 
             <p className="mt-6 text-center text-sm text-gray-500">
-              Already have an account?{' '}
+              Bereits ein Konto?{' '}
               <Link
                 href="/login"
                 className="font-medium text-emerald-600 hover:text-emerald-500"
               >
-                Sign in
+                Jetzt einloggen
               </Link>
             </p>
           </>

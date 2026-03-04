@@ -1,0 +1,11 @@
+{
+  "nav.dashboard": "Panel",
+  "nav.teams": "Takimlar",
+  "nav.players": "Oyuncular",
+  "nav.trainings": "Antrenmanlar",
+  "nav.matches": "Maclar",
+  "nav.analytics": "Analizler",
+  "nav.calendar": "Takvim",
+  "nav.communication": "Iletisim",
+  "nav.settings": "Ayarlar"
+}

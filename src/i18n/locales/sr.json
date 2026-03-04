@@ -1,0 +1,11 @@
+{
+  "nav.dashboard": "Kontrolna tabla",
+  "nav.teams": "Timovi",
+  "nav.players": "Igraci",
+  "nav.trainings": "Treninzi",
+  "nav.matches": "Utakmice",
+  "nav.analytics": "Analize",
+  "nav.calendar": "Kalendar",
+  "nav.communication": "Komunikacija",
+  "nav.settings": "Podesavanja"
+}

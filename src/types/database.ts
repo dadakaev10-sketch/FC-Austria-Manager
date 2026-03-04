@@ -88,8 +88,7 @@ export interface PlayerStats {
 }
 
 export interface Profile {
-  id: string;
-  user_id: string;
+  id: string;          // Same as auth.users.id
   club_id: string | null;
   full_name: string;
   email: string;

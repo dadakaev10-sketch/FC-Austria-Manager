@@ -1,0 +1,16 @@
+{
+  "nav.dashboard": "Dashboard",
+  "nav.teams": "Teams",
+  "nav.players": "Players",
+  "nav.trainings": "Trainings",
+  "nav.matches": "Matches",
+  "nav.analytics": "Analytics",
+  "nav.calendar": "Calendar",
+  "nav.communication": "Communication",
+  "nav.settings": "Settings",
+  "auth.sign_in": "Sign in",
+  "auth.email": "Email",
+  "auth.password": "Password",
+  "auth.create_account": "Create account",
+  "auth.demo_login": "Demo Login"
+}

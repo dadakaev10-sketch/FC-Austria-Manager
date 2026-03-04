@@ -6,7 +6,6 @@ import type { Profile, Club, Team } from '@/types/database';
 
 export const DEMO_PROFILE: Profile = {
   id: 'demo-user-001',
-  user_id: 'demo-user-001',
   club_id: 'demo-club-001',
   full_name: 'Max Mustermann',
   email: 'demo@fcmanager.app',
