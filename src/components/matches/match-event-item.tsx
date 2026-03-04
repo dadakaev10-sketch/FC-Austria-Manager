@@ -8,7 +8,7 @@ import { Target, Star, Square, ArrowRightLeft } from 'lucide-react';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function getEventIcon(eventType: MatchEvent['event_type'], details: string | null) {
+function getEventIcon(eventType: MatchEvent['eventType'], details: string | null) {
   switch (eventType) {
     case 'goal':
       return <Target className="h-4 w-4 text-green-600" />;
@@ -29,22 +29,22 @@ function getEventIcon(eventType: MatchEvent['event_type'], details: string | nul
   }
 }
 
-function getEventLabel(eventType: MatchEvent['event_type']): string {
+function getEventLabel(eventType: MatchEvent['eventType']): string {
   switch (eventType) {
     case 'goal':
-      return 'Goal';
+      return 'Tor';
     case 'assist':
-      return 'Assist';
+      return 'Vorlage';
     case 'card':
-      return 'Card';
+      return 'Karte';
     case 'substitution':
-      return 'Substitution';
+      return 'Auswechslung';
     default:
       return eventType;
   }
 }
 
-function getEventBadgeVariant(eventType: MatchEvent['event_type'], details: string | null) {
+function getEventBadgeVariant(eventType: MatchEvent['eventType'], details: string | null) {
   switch (eventType) {
     case 'goal':
       return 'success' as const;
@@ -72,24 +72,24 @@ interface MatchEventItemProps {
 export function MatchEventItem({ event }: MatchEventItemProps) {
   return (
     <div className="flex items-center gap-4 rounded-lg px-4 py-3 transition-colors hover:bg-gray-50">
-      {/* Minute badge */}
+      {/* Minute Badge */}
       <Badge variant="default" className="min-w-[48px] justify-center font-mono">
         {event.minute}&apos;
       </Badge>
 
-      {/* Event icon */}
+      {/* Event Icon */}
       <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-100">
-        {getEventIcon(event.event_type, event.details)}
+        {getEventIcon(event.eventType, event.details)}
       </div>
 
-      {/* Event details */}
+      {/* Event Details */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-gray-900">
-            {event.player?.name ?? 'Unknown Player'}
+            {event.player?.name ?? 'Unbekannter Spieler'}
           </span>
-          <Badge variant={getEventBadgeVariant(event.event_type, event.details)}>
-            {getEventLabel(event.event_type)}
+          <Badge variant={getEventBadgeVariant(event.eventType, event.details)}>
+            {getEventLabel(event.eventType)}
           </Badge>
         </div>
         {event.details && (

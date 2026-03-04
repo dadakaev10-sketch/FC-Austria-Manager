@@ -21,98 +21,98 @@ import {
 import type { UserRole } from '@/types/database';
 
 // ---------------------------------------------------------------------------
-// Mock data
+// Mock-Daten
 // ---------------------------------------------------------------------------
 
 const MOCK_PROFILE = {
-  full_name: 'Carlos Martinez',
-  email: 'carlos.martinez@fcclub.com',
-  phone: '+49 170 1234567',
-  avatar_url: null as string | null,
+  fullName: 'Stefan Hofer',
+  email: 'stefan.hofer@fcclub.at',
+  phone: '+43 664 1234567',
+  avatarUrl: null as string | null,
 };
 
 const MOCK_CLUB = {
-  name: 'FC Development Academy',
-  address: 'Sportstr. 12',
-  city: 'Munich',
-  country: 'Germany',
-  website: 'https://fc-academy.dev',
+  name: 'FC Austria Wien Jugend',
+  address: 'Fischhofgasse 12',
+  city: 'Wien',
+  country: 'Oesterreich',
+  website: 'https://fc-austria-jugend.at',
 };
 
 interface MockUser {
   id: string;
-  full_name: string;
+  fullName: string;
   email: string;
   role: UserRole;
-  avatar_url: string | null;
+  avatarUrl: string | null;
 }
 
 const MOCK_USERS: MockUser[] = [
   {
     id: 'u1',
-    full_name: 'Carlos Martinez',
-    email: 'carlos.martinez@fcclub.com',
+    fullName: 'Stefan Hofer',
+    email: 'stefan.hofer@fcclub.at',
     role: 'admin',
-    avatar_url: null,
+    avatarUrl: null,
   },
   {
     id: 'u2',
-    full_name: 'Anna Schneider',
-    email: 'anna.schneider@fcclub.com',
-    role: 'club_manager',
-    avatar_url: null,
+    fullName: 'Anna Schneider',
+    email: 'anna.schneider@fcclub.at',
+    role: 'manager',
+    avatarUrl: null,
   },
   {
     id: 'u3',
-    full_name: 'Thomas Muller',
-    email: 'thomas.muller@fcclub.com',
+    fullName: 'Thomas Mueller',
+    email: 'thomas.mueller@fcclub.at',
     role: 'coach',
-    avatar_url: null,
+    avatarUrl: null,
   },
   {
     id: 'u4',
-    full_name: 'Lisa Weber',
-    email: 'lisa.weber@fcclub.com',
+    fullName: 'Lisa Weber',
+    email: 'lisa.weber@fcclub.at',
     role: 'coach',
-    avatar_url: null,
+    avatarUrl: null,
   },
   {
     id: 'u5',
-    full_name: 'Marco Rossi',
-    email: 'marco.rossi@fcclub.com',
+    fullName: 'Marco Berger',
+    email: 'marco.berger@fcclub.at',
     role: 'assistant_coach',
-    avatar_url: null,
+    avatarUrl: null,
   },
   {
     id: 'u6',
-    full_name: 'Sophie Fischer',
-    email: 'sophie.fischer@fcclub.com',
+    fullName: 'Sophie Fischer',
+    email: 'sophie.fischer@fcclub.at',
     role: 'assistant_coach',
-    avatar_url: null,
+    avatarUrl: null,
   },
   {
     id: 'u7',
-    full_name: 'Jan Becker',
-    email: 'jan.becker@fcclub.com',
+    fullName: 'Jan Becker',
+    email: 'jan.becker@fcclub.at',
     role: 'player',
-    avatar_url: null,
+    avatarUrl: null,
   },
   {
     id: 'u8',
-    full_name: 'Maria Hoffmann',
-    email: 'maria.hoffmann@fcclub.com',
+    fullName: 'Maria Hoffmann',
+    email: 'maria.hoffmann@fcclub.at',
     role: 'parent',
-    avatar_url: null,
+    avatarUrl: null,
   },
 ];
 
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Admin' },
-  { value: 'club_manager', label: 'Club Manager' },
-  { value: 'coach', label: 'Coach' },
-  { value: 'assistant_coach', label: 'Assistant Coach' },
-  { value: 'player', label: 'Player' },
-  { value: 'parent', label: 'Parent' },
+  { value: 'manager', label: 'Manager' },
+  { value: 'coach', label: 'Trainer' },
+  { value: 'assistant_coach', label: 'Co-Trainer' },
+  { value: 'player', label: 'Spieler' },
+  { value: 'parent', label: 'Elternteil' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -123,7 +123,7 @@ function getRoleBadgeVariant(role: UserRole) {
   switch (role) {
     case 'admin':
       return 'danger' as const;
-    case 'club_manager':
+    case 'manager':
       return 'warning' as const;
     case 'coach':
       return 'success' as const;
@@ -139,10 +139,22 @@ function getRoleBadgeVariant(role: UserRole) {
 }
 
 function formatRoleLabel(role: string) {
-  return role
-    .split('_')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
+  switch (role) {
+    case 'admin':
+      return 'Admin';
+    case 'manager':
+      return 'Manager';
+    case 'coach':
+      return 'Trainer';
+    case 'assistant_coach':
+      return 'Co-Trainer';
+    case 'player':
+      return 'Spieler';
+    case 'parent':
+      return 'Elternteil';
+    default:
+      return role;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -153,24 +165,24 @@ export default function SettingsPage() {
   const { profile, hasRole } = useAuthStore();
 
   const isAdmin = hasRole(['admin']);
-  const isAdminOrManager = hasRole(['admin', 'club_manager']);
+  const isAdminOrManager = hasRole(['admin', 'manager']);
 
-  // Profile form state
-  const [profileName, setProfileName] = useState(MOCK_PROFILE.full_name);
+  // Profil-Formular
+  const [profileName, setProfileName] = useState(MOCK_PROFILE.fullName);
   const [profileEmail, setProfileEmail] = useState(MOCK_PROFILE.email);
   const [profilePhone, setProfilePhone] = useState(MOCK_PROFILE.phone);
 
-  // Club form state
+  // Vereins-Formular
   const [clubName, setClubName] = useState(MOCK_CLUB.name);
   const [clubAddress, setClubAddress] = useState(MOCK_CLUB.address);
   const [clubCity, setClubCity] = useState(MOCK_CLUB.city);
   const [clubCountry, setClubCountry] = useState(MOCK_CLUB.country);
   const [clubWebsite, setClubWebsite] = useState(MOCK_CLUB.website);
 
-  // Role management state
+  // Rollenverwaltung
   const [users, setUsers] = useState<MockUser[]>(MOCK_USERS);
 
-  // Notification preferences state
+  // Benachrichtigungseinstellungen
   const [notifyTraining, setNotifyTraining] = useState(true);
   const [notifyMatch, setNotifyMatch] = useState(true);
   const [notifyAnnouncements, setNotifyAnnouncements] = useState(true);
@@ -183,30 +195,30 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Page header */}
+      {/* Seitenkopf */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Einstellungen</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Manage your profile, club settings, and notification preferences.
+          Verwalte dein Profil, Vereinseinstellungen und Benachrichtigungen.
         </p>
       </div>
 
-      {/* Profile Settings */}
+      {/* Profileinstellungen */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="h-5 w-5 text-emerald-600" />
-            Profile Settings
+            Profil
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            {/* Avatar section */}
+            {/* Avatar */}
             <div className="flex items-center gap-4">
               <div className="relative">
                 <Avatar
                   name={profileName}
-                  src={MOCK_PROFILE.avatar_url}
+                  src={MOCK_PROFILE.avatarUrl}
                   size="lg"
                 />
                 <button className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-emerald-600 text-white shadow-sm hover:bg-emerald-700">
@@ -218,29 +230,29 @@ export default function SettingsPage() {
                 <p className="text-xs text-gray-500">
                   {profile?.role
                     ? formatRoleLabel(profile.role)
-                    : 'Coach'}
+                    : 'Trainer'}
                 </p>
               </div>
             </div>
 
-            {/* Form fields */}
+            {/* Formularfelder */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input
                 id="profile-name"
-                label="Full Name"
+                label="Vollstaendiger Name"
                 value={profileName}
                 onChange={(e) => setProfileName(e.target.value)}
               />
               <Input
                 id="profile-email"
-                label="Email"
+                label="E-Mail"
                 type="email"
                 value={profileEmail}
                 onChange={(e) => setProfileEmail(e.target.value)}
               />
               <Input
                 id="profile-phone"
-                label="Phone"
+                label="Telefon"
                 type="tel"
                 value={profilePhone}
                 onChange={(e) => setProfilePhone(e.target.value)}
@@ -250,20 +262,20 @@ export default function SettingsPage() {
             <div className="flex justify-end">
               <Button>
                 <Save className="mr-2 h-4 w-4" />
-                Save Profile
+                Profil speichern
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Club Settings (admin/club_manager only) */}
+      {/* Vereinseinstellungen (Admin/Manager) */}
       {isAdminOrManager && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Building className="h-5 w-5 text-emerald-600" />
-              Club Settings
+              Vereinseinstellungen
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -271,32 +283,32 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Input
                   id="club-name"
-                  label="Club Name"
+                  label="Vereinsname"
                   value={clubName}
                   onChange={(e) => setClubName(e.target.value)}
                 />
                 <Input
                   id="club-website"
-                  label="Website"
+                  label="Webseite"
                   type="url"
                   value={clubWebsite}
                   onChange={(e) => setClubWebsite(e.target.value)}
                 />
                 <Input
                   id="club-address"
-                  label="Address"
+                  label="Adresse"
                   value={clubAddress}
                   onChange={(e) => setClubAddress(e.target.value)}
                 />
                 <Input
                   id="club-city"
-                  label="City"
+                  label="Stadt"
                   value={clubCity}
                   onChange={(e) => setClubCity(e.target.value)}
                 />
                 <Input
                   id="club-country"
-                  label="Country"
+                  label="Land"
                   value={clubCountry}
                   onChange={(e) => setClubCountry(e.target.value)}
                 />
@@ -305,7 +317,7 @@ export default function SettingsPage() {
               <div className="flex justify-end">
                 <Button>
                   <Save className="mr-2 h-4 w-4" />
-                  Save Club Settings
+                  Vereinseinstellungen speichern
                 </Button>
               </div>
             </div>
@@ -313,36 +325,36 @@ export default function SettingsPage() {
         </Card>
       )}
 
-      {/* Role Management (admin only) */}
+      {/* Rollenverwaltung (nur Admin) */}
       {isAdmin && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-emerald-600" />
-              Role Management
+              Rollenverwaltung
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="mb-4 text-sm text-gray-500">
-              Manage user roles and permissions across the club.
+              Verwalte Benutzerrollen und Berechtigungen im Verein.
             </p>
 
-            {/* Desktop table */}
+            {/* Desktop-Tabelle */}
             <div className="hidden overflow-hidden rounded-lg border border-gray-200 md:block">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      User
+                      Benutzer
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Email
+                      E-Mail
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Current Role
+                      Aktuelle Rolle
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Change Role
+                      Rolle aendern
                     </th>
                   </tr>
                 </thead>
@@ -351,9 +363,9 @@ export default function SettingsPage() {
                     <tr key={user.id} className="hover:bg-gray-50">
                       <td className="whitespace-nowrap px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <Avatar name={user.full_name} src={user.avatar_url} size="sm" />
+                          <Avatar name={user.fullName} src={user.avatarUrl} size="sm" />
                           <span className="text-sm font-medium text-gray-900">
-                            {user.full_name}
+                            {user.fullName}
                           </span>
                         </div>
                       </td>
@@ -386,7 +398,7 @@ export default function SettingsPage() {
               </table>
             </div>
 
-            {/* Mobile cards */}
+            {/* Mobile-Karten */}
             <div className="space-y-3 md:hidden">
               {users.map((user) => (
                 <div
@@ -394,10 +406,10 @@ export default function SettingsPage() {
                   className="rounded-lg border border-gray-200 p-4 space-y-3"
                 >
                   <div className="flex items-center gap-3">
-                    <Avatar name={user.full_name} src={user.avatar_url} size="sm" />
+                    <Avatar name={user.fullName} src={user.avatarUrl} size="sm" />
                     <div>
                       <p className="text-sm font-medium text-gray-900">
-                        {user.full_name}
+                        {user.fullName}
                       </p>
                       <p className="text-xs text-gray-500">{user.email}</p>
                     </div>
@@ -427,28 +439,28 @@ export default function SettingsPage() {
         </Card>
       )}
 
-      {/* Notification Preferences */}
+      {/* Benachrichtigungseinstellungen */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bell className="h-5 w-5 text-emerald-600" />
-            Notification Preferences
+            Benachrichtigungen
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="mb-4 text-sm text-gray-500">
-            Choose which email notifications you would like to receive.
+            Waehle, welche E-Mail-Benachrichtigungen du erhalten moechtest.
           </p>
 
           <div className="space-y-4">
-            {/* Training reminders */}
+            {/* Trainingserinnerungen */}
             <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
               <div>
                 <p className="text-sm font-medium text-gray-900">
-                  Training Reminders
+                  Trainingserinnerungen
                 </p>
                 <p className="text-xs text-gray-500">
-                  Receive email reminders before scheduled training sessions.
+                  E-Mail-Erinnerungen vor geplanten Trainingseinheiten erhalten.
                 </p>
               </div>
               <button
@@ -470,14 +482,14 @@ export default function SettingsPage() {
               </button>
             </div>
 
-            {/* Match reminders */}
+            {/* Spielerinnerungen */}
             <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
               <div>
                 <p className="text-sm font-medium text-gray-900">
-                  Match Reminders
+                  Spielerinnerungen
                 </p>
                 <p className="text-xs text-gray-500">
-                  Receive email reminders before upcoming matches.
+                  E-Mail-Erinnerungen vor kommenden Spielen erhalten.
                 </p>
               </div>
               <button
@@ -499,14 +511,14 @@ export default function SettingsPage() {
               </button>
             </div>
 
-            {/* Announcements */}
+            {/* Ankuendigungen */}
             <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
               <div>
                 <p className="text-sm font-medium text-gray-900">
-                  Announcements
+                  Ankuendigungen
                 </p>
                 <p className="text-xs text-gray-500">
-                  Receive email notifications for new club announcements.
+                  E-Mail-Benachrichtigungen bei neuen Vereinsankuendigungen erhalten.
                 </p>
               </div>
               <button
@@ -532,7 +544,7 @@ export default function SettingsPage() {
           <div className="mt-6 flex justify-end">
             <Button>
               <Save className="mr-2 h-4 w-4" />
-              Save Preferences
+              Einstellungen speichern
             </Button>
           </div>
         </CardContent>

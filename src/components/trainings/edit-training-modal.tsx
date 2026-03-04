@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useClubStore } from '@/stores/club-store';
-import { updateTrainingInDb } from '@/lib/supabase/trainings';
+import { trainingsService } from '@/lib/firebase/services';
 import type { Training } from '@/types/database';
 
 interface EditTrainingModalProps {
@@ -30,17 +30,17 @@ export function EditTrainingModal({ isOpen, onClose, training, onSuccess }: Edit
   const [error, setError] = useState<string | null>(null);
 
   const teamOptions = [
-    { value: '', label: 'Mannschaft wählen' },
+    { value: '', label: 'Mannschaft waehlen' },
     ...teams.map((t) => ({ value: t.id, label: `${t.name} (${t.category})` })),
   ];
 
   // Pre-fill when training changes
   useEffect(() => {
     if (training) {
-      setSelectedTeamId(training.team_id || '');
+      setSelectedTeamId(training.teamId || '');
       setDate(training.date || '');
-      setStartTime(training.start_time || '');
-      setEndTime(training.end_time || '');
+      setStartTime(training.startTime || '');
+      setEndTime(training.endTime || '');
       setLocation(training.location || '');
       setFocus(training.focus || '');
       setNotes(training.notes || '');
@@ -56,17 +56,15 @@ export function EditTrainingModal({ isOpen, onClose, training, onSuccess }: Edit
     setError(null);
 
     try {
-      const { error: dbError } = await updateTrainingInDb(training.id, {
-        team_id: selectedTeamId,
+      await trainingsService.update(training.id, {
+        teamId: selectedTeamId,
         date,
-        start_time: startTime,
-        end_time: endTime || null,
-        location: location.trim() || null,
-        focus: focus.trim() || null,
+        startTime,
+        endTime: endTime || '',
+        location: location.trim() || '',
+        focus: focus.trim() || '',
         notes: notes.trim() || null,
       });
-
-      if (dbError) throw dbError;
 
       onClose();
       onSuccess?.();
@@ -145,7 +143,7 @@ export function EditTrainingModal({ isOpen, onClose, training, onSuccess }: Edit
           <textarea
             id="edit-training-notes"
             rows={3}
-            placeholder="Zusätzliche Hinweise zum Training..."
+            placeholder="Zusaetzliche Hinweise zum Training..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"

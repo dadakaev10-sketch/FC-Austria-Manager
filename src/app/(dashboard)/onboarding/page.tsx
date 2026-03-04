@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 import { useAuthStore } from '@/stores/auth-store';
 import { useClubStore } from '@/stores/club-store';
+import { clubsService, updateUserProfile } from '@/lib/firebase/services';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Shield, Building2, ArrowRight } from 'lucide-react';
+import type { Club } from '@/types/database';
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -16,7 +17,7 @@ export default function OnboardingPage() {
 
   const [clubName, setClubName] = useState('');
   const [city, setCity] = useState('');
-  const [country, setCountry] = useState('Deutschland');
+  const [country, setCountry] = useState('Oesterreich');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -28,41 +29,39 @@ export default function OnboardingPage() {
     setLoading(true);
 
     try {
-      const supabase = createClient();
+      // 1. Create the club in Firestore
+      const clubId = await clubsService.create({
+        name: clubName.trim(),
+        logoUrl: null,
+        address: null,
+        city: city.trim() || null,
+        country: country.trim() || null,
+        foundedYear: null,
+        website: null,
+        createdAt: new Date().toISOString(),
+      });
 
-      // 1. Create the club
-      const { data: club, error: clubError } = await supabase
-        .from('clubs')
-        .insert({
-          name: clubName.trim(),
-          city: city.trim() || null,
-          country: country.trim() || null,
-        })
-        .select()
-        .single();
+      const club: Club = {
+        id: clubId,
+        name: clubName.trim(),
+        logoUrl: null,
+        address: null,
+        city: city.trim() || null,
+        country: country.trim() || null,
+        foundedYear: null,
+        website: null,
+        createdAt: new Date().toISOString(),
+      };
 
-      if (clubError) {
-        setError(clubError.message);
-        return;
-      }
-
-      // 2. Update the user profile: assign club_id and set role to admin
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          club_id: club.id,
-          role: 'admin',
-        })
-        .eq('id', profile.id);
-
-      if (profileError) {
-        setError(profileError.message);
-        return;
-      }
+      // 2. Update the user profile: assign clubId and set role to admin
+      await updateUserProfile(profile.id, {
+        clubId: clubId,
+        role: 'admin',
+      });
 
       // 3. Update local state
       setCurrentClub(club);
-      setProfile({ ...profile, club_id: club.id, role: 'admin' });
+      setProfile({ ...profile, clubId: clubId, role: 'admin' });
 
       // 4. Navigate to dashboard
       router.push('/dashboard');
@@ -103,7 +102,7 @@ export default function OnboardingPage() {
               id="clubName"
               label="Vereinsname"
               type="text"
-              placeholder="z.B. FC Musterstadt"
+              placeholder="z.B. FC Austria Wien Jugend"
               value={clubName}
               onChange={(e) => setClubName(e.target.value)}
               required
@@ -113,7 +112,7 @@ export default function OnboardingPage() {
               id="city"
               label="Stadt"
               type="text"
-              placeholder="z.B. Berlin"
+              placeholder="z.B. Wien"
               value={city}
               onChange={(e) => setCity(e.target.value)}
             />
@@ -122,7 +121,7 @@ export default function OnboardingPage() {
               id="country"
               label="Land"
               type="text"
-              placeholder="z.B. Deutschland"
+              placeholder="z.B. Oesterreich"
               value={country}
               onChange={(e) => setCountry(e.target.value)}
             />

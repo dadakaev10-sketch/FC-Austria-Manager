@@ -1,10 +1,11 @@
 import { create } from 'zustand';
-import type { Club, Team, Player } from '@/types/database';
+import type { Club, Team, Player, PlayerTeam } from '@/types/database';
 
 interface ClubState {
   currentClub: Club | null;
   teams: Team[];
   players: Player[];
+  playerTeams: PlayerTeam[];
   selectedTeamId: string | null;
 
   setCurrentClub: (club: Club | null) => void;
@@ -21,6 +22,11 @@ interface ClubState {
   updatePlayer: (playerId: string, data: Partial<Player>) => void;
   removePlayer: (playerId: string) => void;
 
+  // Player-Team assignments (many-to-many)
+  setPlayerTeams: (playerTeams: PlayerTeam[]) => void;
+  addPlayerTeam: (pt: PlayerTeam) => void;
+  removePlayerTeam: (ptId: string) => void;
+
   setSelectedTeamId: (id: string | null) => void;
 }
 
@@ -28,6 +34,7 @@ export const useClubStore = create<ClubState>((set) => ({
   currentClub: null,
   teams: [],
   players: [],
+  playerTeams: [],
   selectedTeamId: null,
 
   setCurrentClub: (currentClub) => set({ currentClub }),
@@ -53,6 +60,12 @@ export const useClubStore = create<ClubState>((set) => ({
     })),
   removePlayer: (playerId) =>
     set((s) => ({ players: s.players.filter((p) => p.id !== playerId) })),
+
+  // Player-Team assignments
+  setPlayerTeams: (playerTeams) => set({ playerTeams }),
+  addPlayerTeam: (pt) => set((s) => ({ playerTeams: [...s.playerTeams, pt] })),
+  removePlayerTeam: (ptId) =>
+    set((s) => ({ playerTeams: s.playerTeams.filter((pt) => pt.id !== ptId) })),
 
   setSelectedTeamId: (selectedTeamId) => set({ selectedTeamId }),
 }));

@@ -23,18 +23,18 @@ import {
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
-// Types
+// Typen
 // ---------------------------------------------------------------------------
 
 interface MockAnnouncement {
   id: string;
   title: string;
   content: string;
-  announcement_type: 'general' | 'training_reminder' | 'match_reminder' | 'parent_message';
-  is_pinned: boolean;
-  author_name: string;
-  team_name: string | null;
-  created_at: string;
+  announcementType: 'general' | 'training_reminder' | 'match_reminder' | 'parent_message';
+  isPinned: boolean;
+  authorName: string;
+  teamName: string | null;
+  createdAt: string;
 }
 
 interface MockReminder {
@@ -44,79 +44,79 @@ interface MockReminder {
   date: string;
   time: string;
   location: string;
-  team_name: string;
+  teamName: string;
 }
 
 // ---------------------------------------------------------------------------
-// Mock data
+// Mock-Daten
 // ---------------------------------------------------------------------------
 
 const MOCK_ANNOUNCEMENTS: MockAnnouncement[] = [
   {
     id: 'a1',
-    title: 'Training schedule updated for March',
+    title: 'Trainingsplan fuer Maerz aktualisiert',
     content:
-      'The March training schedule has been finalized. Please check the calendar for your team-specific sessions. Note that U12 sessions have moved to Main Pitch A starting this week.',
-    announcement_type: 'general',
-    is_pinned: true,
-    author_name: 'Coach Martinez',
-    team_name: null,
-    created_at: '2026-03-03T10:00:00Z',
+      'Der Trainingsplan fuer Maerz ist finalisiert. Bitte pruefe den Kalender fuer deine mannschaftsspezifischen Einheiten. Die U15-Einheiten wurden auf Trainingsplatz A verschoben.',
+    announcementType: 'general',
+    isPinned: true,
+    authorName: 'Trainer Hofer',
+    teamName: null,
+    createdAt: '2026-03-03T10:00:00Z',
   },
   {
     id: 'a2',
-    title: 'Match day kits available for pickup',
+    title: 'Spieltag-Trikots koennen abgeholt werden',
     content:
-      'New match day kits for all youth teams are now ready for pickup at the club office. Please collect them before Saturday. Each player receives a home and away kit.',
-    announcement_type: 'general',
-    is_pinned: true,
-    author_name: 'Club Admin',
-    team_name: null,
-    created_at: '2026-03-02T14:30:00Z',
+      'Die neuen Spieltag-Trikots fuer alle Jugendmannschaften sind jetzt im Vereinsbuero abholbereit. Bitte vor Samstag abholen. Jeder Spieler erhaelt ein Heim- und Auswaertstrikot.',
+    announcementType: 'general',
+    isPinned: true,
+    authorName: 'Vereinsleitung',
+    teamName: null,
+    createdAt: '2026-03-02T14:30:00Z',
   },
   {
     id: 'a3',
-    title: 'U12 training session reminder',
+    title: 'U15 Trainingserinnerung',
     content:
-      'Reminder that U12 Development has training tomorrow at 16:00 on Main Pitch A. Please arrive 15 minutes early for warm-up. Bring shin guards and water.',
-    announcement_type: 'training_reminder',
-    is_pinned: false,
-    author_name: 'Coach Martinez',
-    team_name: 'U12 Development',
-    created_at: '2026-03-01T09:00:00Z',
+      'Erinnerung: U15 hat morgen Training um 16:00 auf Trainingsplatz A. Bitte 15 Minuten frueher zum Aufwaermen erscheinen. Schienbeinschoner und Wasser mitbringen.',
+    announcementType: 'training_reminder',
+    isPinned: false,
+    authorName: 'Trainer Hofer',
+    teamName: 'U15',
+    createdAt: '2026-03-01T09:00:00Z',
   },
   {
     id: 'a4',
-    title: 'Saturday match vs FC Adler - confirm availability',
+    title: 'Samstag Spiel gegen FC Rapid - Verfuegbarkeit bestaetigen',
     content:
-      'Please confirm your availability for the U14 match against FC Adler this Saturday at 10:00. Reply to this announcement or contact Coach Martinez directly by Thursday.',
-    announcement_type: 'match_reminder',
-    is_pinned: false,
-    author_name: 'Coach Martinez',
-    team_name: 'U14 Academy',
-    created_at: '2026-02-28T16:00:00Z',
+      'Bitte bestaetigt eure Verfuegbarkeit fuer das U17-Spiel gegen FC Rapid Wien II am Samstag um 10:00. Antwortet auf diese Ankuendigung oder kontaktiert Trainer Hofer bis Donnerstag.',
+    announcementType: 'match_reminder',
+    isPinned: false,
+    authorName: 'Trainer Hofer',
+    teamName: 'U17',
+    createdAt: '2026-02-28T16:00:00Z',
   },
   {
     id: 'a5',
-    title: 'Parent volunteer opportunity',
+    title: 'Eltern-Freiwillige gesucht',
     content:
-      'We are looking for parent volunteers to help organize the upcoming fundraiser gala on March 22nd. If you are interested, please reach out to the club office.',
-    announcement_type: 'parent_message',
-    is_pinned: false,
-    author_name: 'Club Admin',
-    team_name: null,
-    created_at: '2026-02-27T11:00:00Z',
+      'Wir suchen Eltern-Freiwillige fuer die Organisation der kommenden Benefiz-Gala am 22. Maerz. Bei Interesse bitte das Vereinsbuero kontaktieren.',
+    announcementType: 'parent_message',
+    isPinned: false,
+    authorName: 'Vereinsleitung',
+    teamName: null,
+    createdAt: '2026-02-27T11:00:00Z',
   },
   {
     id: 'a6',
-    title: 'End of season tournament registration open',
+    title: 'Anmeldung zum Fruehjahrsturnier geoeffnet',
     content:
-      'Registration for the spring tournament is now open. All teams U10 through U16 are eligible. Deadline for registration is March 31st. Contact your coach for details.',
-    announcement_type: 'general',
-    is_pinned: false,
-    author_name: 'Club Admin',
-    team_name: null,
-    created_at: '2026-02-25T08:30:00Z',
+      'Die Anmeldung fuer das Fruehjahrsturnier ist jetzt geoeffnet. Alle Mannschaften von U10 bis U19 koennen teilnehmen. Anmeldeschluss ist der 31. Maerz. Kontaktiert euren Trainer fuer Details.',
+    announcementType: 'general',
+    isPinned: false,
+    authorName: 'Vereinsleitung',
+    teamName: null,
+    createdAt: '2026-02-25T08:30:00Z',
   },
 ];
 
@@ -131,39 +131,39 @@ const addDays = (d: Date, n: number) => {
 const MOCK_REMINDERS: MockReminder[] = [
   {
     id: 'r1',
-    title: 'U12 Passing & Movement',
+    title: 'U15 Passspiel & Bewegung',
     type: 'training',
     date: toISODate(addDays(today, 1)),
     time: '16:00',
-    location: 'Main Pitch A',
-    team_name: 'U12 Development',
+    location: 'Trainingsplatz A',
+    teamName: 'U15',
   },
   {
     id: 'r2',
-    title: 'U14 vs FC Adler',
+    title: 'U17 vs FC Rapid Wien II',
     type: 'match',
     date: toISODate(addDays(today, 3)),
     time: '10:00',
-    location: 'Home Stadium',
-    team_name: 'U14 Academy',
+    location: 'Heimstadion',
+    teamName: 'U17',
   },
   {
     id: 'r3',
-    title: 'U16 Pressing & Counter-Attack',
+    title: 'U19 Pressing & Konter',
     type: 'training',
     date: toISODate(addDays(today, 4)),
     time: '16:00',
-    location: 'Training Ground B',
-    team_name: 'U16 Junior',
+    location: 'Trainingsplatz B',
+    teamName: 'U19',
   },
   {
     id: 'r4',
-    title: 'First Team vs SV Stern',
+    title: 'Kampfmannschaft vs SV Mattersburg',
     type: 'match',
     date: toISODate(addDays(today, 7)),
     time: '15:30',
-    location: 'Home Stadium',
-    team_name: 'First Team',
+    location: 'Heimstadion',
+    teamName: 'Kampfmannschaft',
   },
 ];
 
@@ -185,30 +185,38 @@ function getAnnouncementBadgeVariant(type: string) {
 }
 
 function formatAnnouncementType(type: string) {
-  return type
-    .split('_')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
+  switch (type) {
+    case 'general':
+      return 'Allgemein';
+    case 'training_reminder':
+      return 'Training';
+    case 'match_reminder':
+      return 'Spiel';
+    case 'parent_message':
+      return 'Eltern';
+    default:
+      return type;
+  }
 }
 
 // ---------------------------------------------------------------------------
-// Constants
+// Konstanten
 // ---------------------------------------------------------------------------
 
 const TYPE_OPTIONS = [
-  { value: 'general', label: 'General' },
-  { value: 'training_reminder', label: 'Training Reminder' },
-  { value: 'match_reminder', label: 'Match Reminder' },
-  { value: 'parent_message', label: 'Parent Message' },
+  { value: 'general', label: 'Allgemein' },
+  { value: 'training_reminder', label: 'Trainingserinnerung' },
+  { value: 'match_reminder', label: 'Spielerinnerung' },
+  { value: 'parent_message', label: 'Elternnachricht' },
 ];
 
 const TEAM_OPTIONS = [
-  { value: '', label: 'Club-wide (all teams)' },
-  { value: 'U10 Youth', label: 'U10 Youth' },
-  { value: 'U12 Development', label: 'U12 Development' },
-  { value: 'U14 Academy', label: 'U14 Academy' },
-  { value: 'U16 Junior', label: 'U16 Junior' },
-  { value: 'First Team', label: 'First Team' },
+  { value: '', label: 'Vereinsweit (alle Teams)' },
+  { value: 'U12', label: 'U12' },
+  { value: 'U15', label: 'U15' },
+  { value: 'U17', label: 'U17' },
+  { value: 'U19', label: 'U19' },
+  { value: 'Kampfmannschaft', label: 'Kampfmannschaft' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -220,7 +228,7 @@ export default function CommunicationPage() {
   const [activeTab, setActiveTab] = useState<'announcements' | 'reminders'>('announcements');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Form state
+  // Formular-Zustand
   const [formTitle, setFormTitle] = useState('');
   const [formContent, setFormContent] = useState('');
   const [formType, setFormType] = useState('general');
@@ -229,18 +237,17 @@ export default function CommunicationPage() {
 
   const canCreate = isCoachOrAbove();
 
-  // Sort announcements: pinned first, then by date
+  // Ankuendigungen sortieren: angepinnt zuerst, dann nach Datum
   const sortedAnnouncements = useMemo(() => {
     return [...MOCK_ANNOUNCEMENTS].sort((a, b) => {
-      if (a.is_pinned && !b.is_pinned) return -1;
-      if (!a.is_pinned && b.is_pinned) return 1;
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   }, []);
 
   function handleSubmit() {
-    // In production, this would send the data to Supabase
-    // For now, just close the modal and reset form
+    // In Produktion wuerden die Daten an Firestore gesendet
     setIsModalOpen(false);
     setFormTitle('');
     setFormContent('');
@@ -255,18 +262,18 @@ export default function CommunicationPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
+      {/* Seitenkopf */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Communication</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Kommunikation</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Announcements, reminders, and messages for teams and parents.
+            Ankuendigungen, Erinnerungen und Nachrichten fuer Teams und Eltern.
           </p>
         </div>
         {canCreate && (
           <Button onClick={openModal}>
             <Plus className="mr-2 h-4 w-4" />
-            New Announcement
+            Neue Ankuendigung
           </Button>
         )}
       </div>
@@ -283,7 +290,7 @@ export default function CommunicationPage() {
           )}
         >
           <MessageSquare className="h-4 w-4" />
-          Announcements
+          Ankuendigungen
         </button>
         <button
           onClick={() => setActiveTab('reminders')}
@@ -295,40 +302,40 @@ export default function CommunicationPage() {
           )}
         >
           <Bell className="h-4 w-4" />
-          Reminders
+          Erinnerungen
         </button>
       </div>
 
-      {/* Announcements tab */}
+      {/* Ankuendigungen-Tab */}
       {activeTab === 'announcements' && (
         <div className="space-y-4">
           {sortedAnnouncements.map((announcement) => (
             <Card key={announcement.id} className="transition-shadow hover:shadow-md">
               <CardContent className="py-5">
                 <div className="space-y-3">
-                  {/* Header row */}
+                  {/* Kopfzeile */}
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="text-base font-semibold text-gray-900">
                           {announcement.title}
                         </h3>
-                        {announcement.is_pinned && (
+                        {announcement.isPinned && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
                             <Pin className="h-3 w-3" />
-                            Pinned
+                            Angepinnt
                           </span>
                         )}
                       </div>
                       <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
-                        <span>{announcement.author_name}</span>
+                        <span>{announcement.authorName}</span>
                         <span>&middot;</span>
-                        <span>{formatDate(announcement.created_at)}</span>
-                        {announcement.team_name && (
+                        <span>{formatDate(announcement.createdAt)}</span>
+                        {announcement.teamName && (
                           <>
                             <span>&middot;</span>
                             <span className="font-medium text-emerald-600">
-                              {announcement.team_name}
+                              {announcement.teamName}
                             </span>
                           </>
                         )}
@@ -336,14 +343,14 @@ export default function CommunicationPage() {
                     </div>
                     <Badge
                       variant={getAnnouncementBadgeVariant(
-                        announcement.announcement_type
+                        announcement.announcementType
                       )}
                     >
-                      {formatAnnouncementType(announcement.announcement_type)}
+                      {formatAnnouncementType(announcement.announcementType)}
                     </Badge>
                   </div>
 
-                  {/* Content preview */}
+                  {/* Inhaltsvorschau */}
                   <p className="text-sm leading-relaxed text-gray-600">
                     {announcement.content}
                   </p>
@@ -358,10 +365,10 @@ export default function CommunicationPage() {
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <MessageSquare className="mb-3 h-8 w-8 text-gray-300" />
                   <p className="text-sm font-medium text-gray-900">
-                    No announcements yet
+                    Noch keine Ankuendigungen
                   </p>
                   <p className="mt-1 text-sm text-gray-500">
-                    Create a new announcement to share information with your teams.
+                    Erstelle eine neue Ankuendigung, um Informationen mit deinen Teams zu teilen.
                   </p>
                 </div>
               </CardContent>
@@ -370,11 +377,11 @@ export default function CommunicationPage() {
         </div>
       )}
 
-      {/* Reminders tab */}
+      {/* Erinnerungen-Tab */}
       {activeTab === 'reminders' && (
         <div className="space-y-4">
           <p className="text-sm text-gray-500">
-            Upcoming trainings and matches automatically generated from the schedule.
+            Kommende Trainings und Spiele automatisch aus dem Zeitplan generiert.
           </p>
           {MOCK_REMINDERS.map((reminder) => {
             const isMatch = reminder.type === 'match';
@@ -402,11 +409,11 @@ export default function CommunicationPage() {
                           {reminder.title}
                         </h3>
                         <Badge variant={isMatch ? 'info' : 'success'}>
-                          {isMatch ? 'Match' : 'Training'}
+                          {isMatch ? 'Spiel' : 'Training'}
                         </Badge>
                       </div>
                       <p className="mt-0.5 text-sm font-medium text-emerald-600">
-                        {reminder.team_name}
+                        {reminder.teamName}
                       </p>
                       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
                         <span className="flex items-center gap-1">
@@ -431,10 +438,10 @@ export default function CommunicationPage() {
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <Bell className="mb-3 h-8 w-8 text-gray-300" />
                   <p className="text-sm font-medium text-gray-900">
-                    No upcoming reminders
+                    Keine kommenden Erinnerungen
                   </p>
                   <p className="mt-1 text-sm text-gray-500">
-                    Reminders will appear here when trainings or matches are scheduled.
+                    Erinnerungen erscheinen hier, wenn Trainings oder Spiele geplant sind.
                   </p>
                 </div>
               </CardContent>
@@ -443,18 +450,18 @@ export default function CommunicationPage() {
         </div>
       )}
 
-      {/* New Announcement Modal */}
+      {/* Modal: Neue Ankuendigung */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="New Announcement"
+        title="Neue Ankuendigung"
         size="lg"
       >
         <div className="space-y-4">
           <Input
             id="announcement-title"
-            label="Title"
-            placeholder="Announcement title..."
+            label="Titel"
+            placeholder="Titel der Ankuendigung..."
             value={formTitle}
             onChange={(e) => setFormTitle(e.target.value)}
           />
@@ -464,13 +471,13 @@ export default function CommunicationPage() {
               htmlFor="announcement-content"
               className="block text-sm font-medium text-gray-700"
             >
-              Content
+              Inhalt
             </label>
             <textarea
               id="announcement-content"
               rows={4}
               className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-              placeholder="Write your announcement..."
+              placeholder="Schreibe deine Ankuendigung..."
               value={formContent}
               onChange={(e) => setFormContent(e.target.value)}
             />
@@ -479,21 +486,21 @@ export default function CommunicationPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Select
               id="announcement-type"
-              label="Type"
+              label="Typ"
               options={TYPE_OPTIONS}
               value={formType}
               onChange={(e) => setFormType(e.target.value)}
             />
             <Select
               id="announcement-team"
-              label="Team (optional)"
+              label="Mannschaft (optional)"
               options={TEAM_OPTIONS}
               value={formTeam}
               onChange={(e) => setFormTeam(e.target.value)}
             />
           </div>
 
-          {/* Pinned toggle */}
+          {/* Anpinnen-Toggle */}
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -514,21 +521,21 @@ export default function CommunicationPage() {
             </button>
             <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
               <Pin className="h-4 w-4" />
-              Pin this announcement
+              Ankuendigung anpinnen
             </label>
           </div>
 
-          {/* Actions */}
+          {/* Aktionen */}
           <div className="flex justify-end gap-3 border-t border-gray-100 pt-4">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-              Cancel
+              Abbrechen
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={!formTitle.trim() || !formContent.trim()}
             >
               <Send className="mr-2 h-4 w-4" />
-              Publish
+              Veroeffentlichen
             </Button>
           </div>
         </div>

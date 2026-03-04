@@ -6,7 +6,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { upsertAttendance } from '@/lib/supabase/trainings';
+import { trainingAttendanceService } from '@/lib/firebase/services';
 import { Save, Check } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -16,8 +16,8 @@ import { Save, Check } from 'lucide-react';
 interface PlayerEntry {
   id: string;
   name: string;
-  jersey_number: number | null;
-  photo_url: string | null;
+  jerseyNumber?: number | null;
+  photoUrl?: string | null;
 }
 
 interface AttendanceTrackerProps {
@@ -33,7 +33,7 @@ interface AttendanceTrackerProps {
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: 'present', label: 'Anwesend' },
-  { value: 'late', label: 'Verspätet' },
+  { value: 'late', label: 'Verspaetet' },
   { value: 'injured', label: 'Verletzt' },
   { value: 'absent', label: 'Abwesend' },
 ];
@@ -47,7 +47,7 @@ const STATUS_BADGE_VARIANT: Record<AttendanceStatus, 'success' | 'warning' | 'da
 
 const STATUS_LABEL: Record<AttendanceStatus, string> = {
   present: 'Anwesend',
-  late: 'Verspätet',
+  late: 'Verspaetet',
   injured: 'Verletzt',
   absent: 'Abwesend',
 };
@@ -101,14 +101,17 @@ export function AttendanceTracker({ trainingId, players, initialAttendance, canE
     setSaveSuccess(false);
 
     try {
-      const records = Object.entries(attendance).map(([player_id, status]) => ({
-        player_id,
-        status,
-      }));
+      // Create/update attendance records in Firestore
+      const promises = Object.entries(attendance).map(([playerId, status]) =>
+        trainingAttendanceService.create({
+          trainingId,
+          playerId,
+          status,
+          notes: null,
+        })
+      );
 
-      const { error: dbError } = await upsertAttendance(trainingId, records);
-      if (dbError) throw dbError;
-
+      await Promise.all(promises);
       setSaveSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Anwesenheit konnte nicht gespeichert werden');
@@ -121,7 +124,7 @@ export function AttendanceTracker({ trainingId, players, initialAttendance, canE
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <p className="text-sm text-gray-500">
-          Keine Spieler in dieser Mannschaft. Füge zuerst Spieler hinzu.
+          Keine Spieler in dieser Mannschaft. Fuege zuerst Spieler hinzu.
         </p>
       </div>
     );
@@ -154,15 +157,17 @@ export function AttendanceTracker({ trainingId, players, initialAttendance, canE
           <tbody className="divide-y divide-gray-100">
             {players.map((player) => {
               const status = attendance[player.id] || 'present';
+              const photoUrl = player.photoUrl || null;
+              const jerseyNum = player.jerseyNumber ?? null;
               return (
                 <tr key={player.id} className="transition-colors hover:bg-gray-50">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <Avatar src={player.photo_url} name={player.name} size="sm" />
+                      <Avatar src={photoUrl} name={player.name} size="sm" />
                       <div className="min-w-0">
                         <p className="truncate font-medium text-gray-900">{player.name}</p>
-                        {player.jersey_number != null && (
-                          <p className="text-xs text-gray-500">#{player.jersey_number}</p>
+                        {jerseyNum != null && (
+                          <p className="text-xs text-gray-500">#{jerseyNum}</p>
                         )}
                       </div>
                     </div>

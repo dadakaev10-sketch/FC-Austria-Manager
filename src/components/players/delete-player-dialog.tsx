@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { deletePlayerInDb } from '@/lib/supabase/players';
+import { playersService } from '@/lib/firebase/services';
 
 interface DeletePlayerDialogProps {
   isOpen: boolean;
@@ -19,9 +19,7 @@ export function DeletePlayerDialog({ isOpen, onClose, player, onSuccess }: Delet
     setIsLoading(true);
 
     try {
-      const { error } = await deletePlayerInDb(player.id);
-      if (error) throw error;
-
+      await playersService.delete(player.id);
       onClose();
       onSuccess?.();
     } catch (err) {
@@ -36,9 +34,9 @@ export function DeletePlayerDialog({ isOpen, onClose, player, onSuccess }: Delet
       isOpen={isOpen}
       onClose={onClose}
       onConfirm={handleConfirm}
-      title="Spieler löschen"
-      message={`Der Spieler „${player?.name}" und alle zugehörigen Daten (Stats, Bewertungen, Anwesenheiten) werden unwiderruflich gelöscht.`}
-      confirmLabel="Spieler löschen"
+      title="Spieler loeschen"
+      message={`Der Spieler "${player?.name}" und alle zugehoerigen Daten (Stats, Bewertungen, Anwesenheiten) werden unwiderruflich geloescht.`}
+      confirmLabel="Spieler loeschen"
       isLoading={isLoading}
     />
   );

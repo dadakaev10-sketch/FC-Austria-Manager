@@ -21,12 +21,15 @@ function getCategoryBadgeVariant(category: string) {
     case 'U12':
       return 'info' as const;
     case 'U14':
-    case 'U16':
-    case 'U18':
+    case 'U15':
+    case 'U17':
       return 'warning' as const;
-    case 'First Team':
-    case 'B Team':
+    case 'U19':
+    case 'U21':
       return 'success' as const;
+    case 'Kampfmannschaft':
+    case 'Reserve':
+      return 'danger' as const;
     default:
       return 'default' as const;
   }
@@ -34,25 +37,24 @@ function getCategoryBadgeVariant(category: string) {
 
 export default function TeamsPage() {
   const { hasRole } = useAuthStore();
-  const { teams } = useClubStore();
+  const { teams, playerTeams } = useClubStore();
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editTeam, setEditTeam] = useState<Team | null>(null);
   const [deleteTeam, setDeleteTeam] = useState<{ id: string; name: string } | null>(null);
 
-  const canManage = hasRole(['admin', 'club_manager']);
+  const canManage = hasRole(['admin', 'manager']);
 
-  // Map teams to display data (handle Supabase join shape)
+  // Map teams to display data with player count from playerTeams junction
   const displayTeams = teams.map((t) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw = t as any;
+    const playerCount = playerTeams.filter((pt) => pt.teamId === t.id).length;
     return {
       id: t.id,
       name: t.name,
       category: t.category,
       season: t.season,
-      coachName: raw.coach?.full_name ?? 'Nicht zugewiesen',
-      playerCount: Array.isArray(raw.players) ? raw.players.length : 0,
+      coachName: t.coach?.fullName ?? 'Nicht zugewiesen',
+      playerCount,
       _raw: t,
     };
   });
@@ -142,7 +144,7 @@ export default function TeamsPage() {
                       setDeleteTeam({ id: team.id, name: team.name });
                     }}
                     className="rounded-lg bg-white p-1.5 shadow-sm ring-1 ring-gray-200 hover:bg-red-50"
-                    title="Team löschen"
+                    title="Team loeschen"
                   >
                     <Trash2 className="h-3.5 w-3.5 text-red-500" />
                   </button>
@@ -155,7 +157,7 @@ export default function TeamsPage() {
         <EmptyState
           icon={Users}
           title="Noch keine Teams"
-          description="Erstelle dein erstes Team, um Spieler hinzuzufügen und deine Mannschaft zu verwalten."
+          description="Erstelle dein erstes Team, um Spieler hinzuzufuegen und deine Mannschaft zu verwalten."
           actionLabel={canManage ? 'Team erstellen' : undefined}
           onAction={canManage ? () => setIsCreateModalOpen(true) : undefined}
         />

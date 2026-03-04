@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useClubStore } from '@/stores/club-store';
-import { deleteTeamInDb } from '@/lib/supabase/teams';
+import { teamsService } from '@/lib/firebase/services';
 
 interface DeleteTeamDialogProps {
   isOpen: boolean;
@@ -20,9 +20,7 @@ export function DeleteTeamDialog({ isOpen, onClose, team, onSuccess }: DeleteTea
     setIsLoading(true);
 
     try {
-      const { error } = await deleteTeamInDb(team.id);
-      if (error) throw error;
-
+      await teamsService.delete(team.id);
       useClubStore.getState().removeTeam(team.id);
       onClose();
       onSuccess?.();
@@ -38,9 +36,9 @@ export function DeleteTeamDialog({ isOpen, onClose, team, onSuccess }: DeleteTea
       isOpen={isOpen}
       onClose={onClose}
       onConfirm={handleConfirm}
-      title="Team löschen"
-      message={`Das Team „${team?.name}" und alle zugehörigen Daten (Spieler, Trainings, Spiele) werden unwiderruflich gelöscht.`}
-      confirmLabel="Team löschen"
+      title="Team loeschen"
+      message={`Das Team "${team?.name}" und alle zugehoerigen Daten werden unwiderruflich geloescht.`}
+      confirmLabel="Team loeschen"
       isLoading={isLoading}
     />
   );

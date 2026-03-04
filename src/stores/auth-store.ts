@@ -23,6 +23,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isCoachOrAbove: () => {
     const { profile } = get();
     if (!profile) return false;
-    return ['admin', 'club_manager', 'coach'].includes(profile.role);
+    return ['admin', 'manager', 'coach'].includes(profile.role);
   },
 }));

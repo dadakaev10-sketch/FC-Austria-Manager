@@ -5,7 +5,7 @@ import { useClubStore } from '@/stores/club-store';
 import { useUIStore } from '@/stores/ui-store';
 import { Bell, LogOut, Menu, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { signOutUser } from '@/lib/firebase/auth';
 import { cn } from '@/lib/utils';
 import { isDemoMode, disableDemoMode } from '@/lib/demo-data';
 
@@ -19,8 +19,7 @@ export function Header() {
     if (isDemoMode()) {
       disableDemoMode();
     } else {
-      const supabase = createClient();
-      await supabase.auth.signOut();
+      await signOutUser();
     }
     router.push('/login');
   };
@@ -60,7 +59,7 @@ export function Header() {
         <button
           onClick={handleLogout}
           className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-          title="Logout"
+          title="Abmelden"
         >
           <LogOut className="h-5 w-5" />
         </button>

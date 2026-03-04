@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useClubStore } from '@/stores/club-store';
-import { updatePlayerInDb } from '@/lib/supabase/players';
+import { playersService } from '@/lib/firebase/services';
 import type { Player } from '@/types/database';
 
 interface EditPlayerModalProps {
@@ -17,7 +17,7 @@ interface EditPlayerModalProps {
 }
 
 const POSITION_OPTIONS = [
-  { value: '', label: 'Position wählen' },
+  { value: '', label: 'Position waehlen' },
   { value: 'goalkeeper', label: 'Torwart' },
   { value: 'center-back', label: 'Innenverteidiger' },
   { value: 'left-back', label: 'Linker Verteidiger' },
@@ -25,23 +25,20 @@ const POSITION_OPTIONS = [
   { value: 'defensive-midfielder', label: 'Defensives Mittelfeld' },
   { value: 'central-midfielder', label: 'Zentrales Mittelfeld' },
   { value: 'attacking-midfielder', label: 'Offensives Mittelfeld' },
-  { value: 'left-winger', label: 'Linksaußen' },
-  { value: 'right-winger', label: 'Rechtsaußen' },
-  { value: 'striker', label: 'Stürmer' },
+  { value: 'left-winger', label: 'Linksaussen' },
+  { value: 'right-winger', label: 'Rechtsaussen' },
+  { value: 'striker', label: 'Stuermer' },
 ];
 
 const FOOT_OPTIONS = [
-  { value: '', label: 'Fuß wählen' },
+  { value: '', label: 'Fuss waehlen' },
   { value: 'right', label: 'Rechts' },
   { value: 'left', label: 'Links' },
-  { value: 'both', label: 'Beidfüßig' },
+  { value: 'both', label: 'Beidfuessig' },
 ];
 
 export function EditPlayerModal({ isOpen, onClose, player, onSuccess }: EditPlayerModalProps) {
-  const { teams } = useClubStore();
-
   const [name, setName] = useState('');
-  const [selectedTeamId, setSelectedTeamId] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [position, setPosition] = useState('');
   const [preferredFoot, setPreferredFoot] = useState('');
@@ -57,56 +54,47 @@ export function EditPlayerModal({ isOpen, onClose, player, onSuccess }: EditPlay
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const teamOptions = [
-    { value: '', label: 'Team wählen' },
-    ...teams.map((t) => ({ value: t.id, label: `${t.name} (${t.category})` })),
-  ];
-
   // Pre-fill form when player changes
   useEffect(() => {
     if (player) {
       setName(player.name || '');
-      setSelectedTeamId(player.team_id || '');
-      setDateOfBirth(player.date_of_birth || '');
+      setDateOfBirth(player.dateOfBirth || '');
       setPosition(player.position || '');
-      setPreferredFoot(player.preferred_foot || '');
-      setJerseyNumber(player.jersey_number?.toString() || '');
+      setPreferredFoot(player.preferredFoot || '');
+      setJerseyNumber(player.jerseyNumber?.toString() || '');
       setHeight(player.height?.toString() || '');
       setWeight(player.weight?.toString() || '');
-      setContactEmail(player.contact_email || '');
-      setContactPhone(player.contact_phone || '');
-      setParentName(player.parent_name || '');
-      setParentEmail(player.parent_email || '');
-      setParentPhone(player.parent_phone || '');
+      setContactEmail(player.contactEmail || '');
+      setContactPhone(player.contactPhone || '');
+      setParentName(player.parentName || '');
+      setParentEmail(player.parentEmail || '');
+      setParentPhone(player.parentPhone || '');
       setError(null);
     }
   }, [player]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!player || !name.trim() || !selectedTeamId) return;
+    if (!player || !name.trim()) return;
 
     setIsSubmitting(true);
     setError(null);
 
     try {
-      const { error: dbError } = await updatePlayerInDb(player.id, {
-        team_id: selectedTeamId,
+      await playersService.update(player.id, {
         name: name.trim(),
-        date_of_birth: dateOfBirth || null,
+        dateOfBirth: dateOfBirth || null,
         position: position || null,
-        preferred_foot: (preferredFoot as 'left' | 'right' | 'both') || null,
-        jersey_number: jerseyNumber ? parseInt(jerseyNumber) : null,
+        preferredFoot: (preferredFoot as 'left' | 'right' | 'both') || null,
+        jerseyNumber: jerseyNumber ? parseInt(jerseyNumber) : null,
         height: height ? parseFloat(height) : null,
         weight: weight ? parseFloat(weight) : null,
-        contact_email: contactEmail.trim() || null,
-        contact_phone: contactPhone.trim() || null,
-        parent_name: parentName.trim() || null,
-        parent_email: parentEmail.trim() || null,
-        parent_phone: parentPhone.trim() || null,
+        contactEmail: contactEmail.trim() || null,
+        contactPhone: contactPhone.trim() || null,
+        parentName: parentName.trim() || null,
+        parentEmail: parentEmail.trim() || null,
+        parentPhone: parentPhone.trim() || null,
       });
-
-      if (dbError) throw dbError;
 
       onClose();
       onSuccess?.();
@@ -128,12 +116,11 @@ export function EditPlayerModal({ isOpen, onClose, player, onSuccess }: EditPlay
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input id="edit-name" label="Name *" value={name} onChange={(e) => setName(e.target.value)} required />
-          <Select id="edit-team" label="Team *" options={teamOptions} value={selectedTeamId} onChange={(e) => setSelectedTeamId(e.target.value)} required />
           <Input id="edit-dob" label="Geburtsdatum" type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} />
           <Select id="edit-position" label="Position" options={POSITION_OPTIONS} value={position} onChange={(e) => setPosition(e.target.value)} />
-          <Select id="edit-foot" label="Bevorzugter Fuß" options={FOOT_OPTIONS} value={preferredFoot} onChange={(e) => setPreferredFoot(e.target.value)} />
+          <Select id="edit-foot" label="Bevorzugter Fuss" options={FOOT_OPTIONS} value={preferredFoot} onChange={(e) => setPreferredFoot(e.target.value)} />
           <Input id="edit-jersey" label="Trikotnummer" type="number" min={1} max={99} value={jerseyNumber} onChange={(e) => setJerseyNumber(e.target.value)} />
-          <Input id="edit-height" label="Größe (cm)" type="number" value={height} onChange={(e) => setHeight(e.target.value)} />
+          <Input id="edit-height" label="Groesse (cm)" type="number" value={height} onChange={(e) => setHeight(e.target.value)} />
           <Input id="edit-weight" label="Gewicht (kg)" type="number" value={weight} onChange={(e) => setWeight(e.target.value)} />
         </div>
 
@@ -156,7 +143,7 @@ export function EditPlayerModal({ isOpen, onClose, player, onSuccess }: EditPlay
 
         <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
           <Button type="button" variant="outline" onClick={onClose}>Abbrechen</Button>
-          <Button type="submit" disabled={isSubmitting || !name.trim() || !selectedTeamId}>
+          <Button type="submit" disabled={isSubmitting || !name.trim()}>
             {isSubmitting ? 'Wird gespeichert...' : 'Speichern'}
           </Button>
         </div>

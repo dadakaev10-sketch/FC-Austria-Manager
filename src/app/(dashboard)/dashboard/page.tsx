@@ -17,132 +17,93 @@ import {
 import { formatDate, formatTime } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
-// Mock / placeholder data
-// These will be replaced with real Supabase queries once the backend is wired.
+// Mock / Platzhalterdaten
+// Diese werden spaeter durch echte Firebase/Firestore-Abfragen ersetzt.
 // ---------------------------------------------------------------------------
 
-// TODO: Fetch total player count from supabase
-// const { count } = await supabase
-//   .from('players')
-//   .select('*', { count: 'exact', head: true })
-//   .in('team_id', teamIds);
+// TODO: Spieleranzahl aus Firestore abrufen
 const MOCK_TOTAL_PLAYERS = 42;
 
-// TODO: Fetch upcoming trainings count
-// const { count } = await supabase
-//   .from('trainings')
-//   .select('*', { count: 'exact', head: true })
-//   .gte('date', today)
-//   .in('team_id', teamIds);
+// TODO: Kommende Trainings aus Firestore abrufen
 const MOCK_UPCOMING_TRAININGS = 8;
 
-// TODO: Fetch upcoming matches count
-// const { count } = await supabase
-//   .from('matches')
-//   .select('*', { count: 'exact', head: true })
-//   .gte('date', today)
-//   .in('team_id', teamIds);
+// TODO: Kommende Spiele aus Firestore abrufen
 const MOCK_UPCOMING_MATCHES = 3;
 
-// TODO: Calculate attendance rate from training_attendance table
-// const { data: attendance } = await supabase
-//   .from('training_attendance')
-//   .select('status')
-//   .in('training_id', recentTrainingIds);
-// const rate = (present / total) * 100;
+// TODO: Anwesenheitsrate aus Firestore berechnen
 const MOCK_ATTENDANCE_RATE = 87;
 
-// TODO: Fetch next training session
-// const { data: nextTraining } = await supabase
-//   .from('trainings')
-//   .select('*, team:teams(name)')
-//   .gte('date', today)
-//   .order('date', { ascending: true })
-//   .order('start_time', { ascending: true })
-//   .limit(1)
-//   .single();
+// TODO: Naechstes Training aus Firestore abrufen
 const MOCK_NEXT_TRAINING = {
   id: '1',
   date: '2026-03-04',
-  start_time: '17:00',
-  end_time: '18:30',
-  location: 'Training Ground A',
-  focus: 'Tactical positioning & pressing',
-  team: { name: 'U12' },
+  startTime: '17:00',
+  endTime: '18:30',
+  location: 'Trainingsplatz A',
+  focus: 'Taktische Positionierung & Pressing',
+  team: { name: 'U15' },
 };
 
-// TODO: Fetch upcoming matches
-// const { data: upcomingMatches } = await supabase
-//   .from('matches')
-//   .select('*, team:teams(name)')
-//   .gte('date', today)
-//   .order('date', { ascending: true })
-//   .limit(3);
+// TODO: Kommende Spiele aus Firestore abrufen
 const MOCK_UPCOMING_MATCHES_LIST = [
   {
     id: '1',
     date: '2026-03-07',
     time: '15:00',
-    opponent: 'FC United',
-    home_or_away: 'home' as const,
-    competition: 'League',
-    team: { name: 'U12' },
+    opponent: 'FC Rapid Wien II',
+    homeOrAway: 'home' as const,
+    competition: 'Wiener Liga',
+    team: { name: 'U15' },
   },
   {
     id: '2',
     date: '2026-03-14',
     time: '10:30',
-    opponent: 'SC Eagles',
-    home_or_away: 'away' as const,
-    competition: 'Cup',
-    team: { name: 'U14' },
+    opponent: 'SC Admira Jugend',
+    homeOrAway: 'away' as const,
+    competition: 'OeFB Jugendcup',
+    team: { name: 'U17' },
   },
   {
     id: '3',
     date: '2026-03-21',
     time: '14:00',
-    opponent: 'Athletic Stars',
-    home_or_away: 'home' as const,
-    competition: 'League',
-    team: { name: 'U12' },
+    opponent: 'SK Sturm Graz Jugend',
+    homeOrAway: 'home' as const,
+    competition: 'Wiener Liga',
+    team: { name: 'U15' },
   },
 ];
 
-// TODO: Fetch recent announcements
-// const { data: announcements } = await supabase
-//   .from('announcements')
-//   .select('*, author:profiles(full_name)')
-//   .eq('club_id', clubId)
-//   .order('created_at', { ascending: false })
-//   .limit(4);
+// TODO: Ankuendigungen aus Firestore abrufen
 const MOCK_ANNOUNCEMENTS = [
   {
     id: '1',
-    title: 'Training schedule updated for March',
-    announcement_type: 'general' as const,
-    created_at: '2026-03-03T10:00:00Z',
-    author: { full_name: 'Coach Martinez' },
+    title: 'Trainingsplan fuer Maerz aktualisiert',
+    announcementType: 'general' as const,
+    createdAt: '2026-03-03T10:00:00Z',
+    author: { fullName: 'Trainer Hofer' },
   },
   {
     id: '2',
-    title: 'Match day kits available for pickup',
-    announcement_type: 'general' as const,
-    created_at: '2026-03-02T14:30:00Z',
-    author: { full_name: 'Club Admin' },
+    title: 'Spieltag-Trikots koennen abgeholt werden',
+    announcementType: 'general' as const,
+    createdAt: '2026-03-02T14:30:00Z',
+    author: { fullName: 'Vereinsleitung' },
   },
   {
     id: '3',
-    title: 'Reminder: U12 training tomorrow at 5 PM',
-    announcement_type: 'training_reminder' as const,
-    created_at: '2026-03-01T09:00:00Z',
-    author: { full_name: 'Coach Martinez' },
+    title: 'Erinnerung: U15 Training morgen um 17 Uhr',
+    announcementType: 'training_reminder' as const,
+    createdAt: '2026-03-01T09:00:00Z',
+    author: { fullName: 'Trainer Hofer' },
   },
   {
     id: '4',
-    title: 'Saturday match vs FC United - please confirm availability',
-    announcement_type: 'match_reminder' as const,
-    created_at: '2026-02-28T16:00:00Z',
-    author: { full_name: 'Coach Martinez' },
+    title: 'Samstag Spiel gegen FC Rapid - bitte Verfuegbarkeit bestaetigen',
+    announcementType: 'match_reminder' as const,
+    createdAt: '2026-02-28T16:00:00Z',
+    author: { fullName: 'Trainer Hofer' },
   },
 ];
 
@@ -164,10 +125,18 @@ function getAnnouncementBadgeVariant(type: string) {
 }
 
 function formatAnnouncementType(type: string) {
-  return type
-    .split('_')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
+  switch (type) {
+    case 'general':
+      return 'Allgemein';
+    case 'training_reminder':
+      return 'Training';
+    case 'match_reminder':
+      return 'Spiel';
+    case 'parent_message':
+      return 'Eltern';
+    default:
+      return type;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -177,62 +146,62 @@ function formatAnnouncementType(type: string) {
 export default function DashboardPage() {
   const { profile } = useAuthStore();
 
-  const firstName = profile?.full_name?.split(' ')[0] ?? 'Coach';
+  const firstName = profile?.fullName?.split(' ')[0] ?? 'Trainer';
 
   return (
     <div className="space-y-8">
-      {/* Page header */}
+      {/* Seitenkopf */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Welcome back, {firstName}. Here is what is happening today.
+          Willkommen zurueck, {firstName}. Hier ist dein Ueberblick.
         </p>
       </div>
 
-      {/* Stat cards */}
+      {/* Statistik-Karten */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Total Players"
+          title="Spieler gesamt"
           value={MOCK_TOTAL_PLAYERS}
-          change="+3 this month"
+          change="+3 diesen Monat"
           changeType="positive"
           icon={Users}
           iconColor="text-blue-600 bg-blue-100"
         />
         <StatCard
-          title="Upcoming Trainings"
+          title="Kommende Trainings"
           value={MOCK_UPCOMING_TRAININGS}
-          change="Next 7 days"
+          change="Naechste 7 Tage"
           changeType="neutral"
           icon={Dumbbell}
           iconColor="text-emerald-600 bg-emerald-100"
         />
         <StatCard
-          title="Upcoming Matches"
+          title="Kommende Spiele"
           value={MOCK_UPCOMING_MATCHES}
-          change="Next 30 days"
+          change="Naechste 30 Tage"
           changeType="neutral"
           icon={Trophy}
           iconColor="text-amber-600 bg-amber-100"
         />
         <StatCard
-          title="Attendance Rate"
+          title="Anwesenheitsrate"
           value={`${MOCK_ATTENDANCE_RATE}%`}
-          change="+2% vs last month"
+          change="+2% vs. letzten Monat"
           changeType="positive"
           icon={TrendingUp}
           iconColor="text-purple-600 bg-purple-100"
         />
       </div>
 
-      {/* Two-column layout: training + matches */}
+      {/* Zwei-Spalten-Layout: Training + Spiele */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Today's Training */}
+        {/* Heutiges Training */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Dumbbell className="h-5 w-5 text-emerald-600" />
-              Today&apos;s Training
+              Heutiges Training
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -252,8 +221,8 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-gray-400" />
                     <span>
-                      {formatTime(MOCK_NEXT_TRAINING.start_time)} &ndash;{' '}
-                      {formatTime(MOCK_NEXT_TRAINING.end_time)}
+                      {formatTime(MOCK_NEXT_TRAINING.startTime)} &ndash;{' '}
+                      {formatTime(MOCK_NEXT_TRAINING.endTime)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -270,19 +239,19 @@ export default function DashboardPage() {
               <div className="py-8 text-center">
                 <Dumbbell className="mx-auto h-10 w-10 text-gray-300" />
                 <p className="mt-2 text-sm text-gray-500">
-                  No training sessions scheduled for today.
+                  Keine Trainingseinheiten fuer heute geplant.
                 </p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Upcoming Matches */}
+        {/* Kommende Spiele */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-amber-600" />
-              Upcoming Matches
+              Kommende Spiele
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -307,10 +276,10 @@ export default function DashboardPage() {
                       <Badge variant="info">{match.team.name}</Badge>
                       <Badge
                         variant={
-                          match.home_or_away === 'home' ? 'success' : 'warning'
+                          match.homeOrAway === 'home' ? 'success' : 'warning'
                         }
                       >
-                        {match.home_or_away === 'home' ? 'Home' : 'Away'}
+                        {match.homeOrAway === 'home' ? 'Heim' : 'Auswaerts'}
                       </Badge>
                     </div>
                   </div>
@@ -320,7 +289,7 @@ export default function DashboardPage() {
               <div className="py-8 text-center">
                 <Trophy className="mx-auto h-10 w-10 text-gray-300" />
                 <p className="mt-2 text-sm text-gray-500">
-                  No upcoming matches scheduled.
+                  Keine kommenden Spiele geplant.
                 </p>
               </div>
             )}
@@ -328,12 +297,12 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Recent Activity / Announcements */}
+      {/* Letzte Aktivitaeten / Ankuendigungen */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Megaphone className="h-5 w-5 text-gray-600" />
-            Recent Activity
+            Letzte Aktivitaeten
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -349,16 +318,16 @@ export default function DashboardPage() {
                       {announcement.title}
                     </p>
                     <p className="mt-0.5 text-xs text-gray-500">
-                      {announcement.author.full_name} &middot;{' '}
-                      {formatDate(announcement.created_at)}
+                      {announcement.author.fullName} &middot;{' '}
+                      {formatDate(announcement.createdAt)}
                     </p>
                   </div>
                   <Badge
                     variant={getAnnouncementBadgeVariant(
-                      announcement.announcement_type
+                      announcement.announcementType
                     )}
                   >
-                    {formatAnnouncementType(announcement.announcement_type)}
+                    {formatAnnouncementType(announcement.announcementType)}
                   </Badge>
                 </div>
               ))}
@@ -367,7 +336,7 @@ export default function DashboardPage() {
             <div className="py-8 text-center">
               <Megaphone className="mx-auto h-10 w-10 text-gray-300" />
               <p className="mt-2 text-sm text-gray-500">
-                No recent announcements.
+                Keine aktuellen Ankuendigungen.
               </p>
             </div>
           )}

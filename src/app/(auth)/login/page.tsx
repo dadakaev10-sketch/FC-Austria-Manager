@@ -4,7 +4,7 @@ import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Shield, Play } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { signInWithEmail } from '@/lib/firebase/auth';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { enableDemoMode } from '@/lib/demo-data';
@@ -17,7 +17,6 @@ function LoginForm() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Show error if redirected from auth callback failure
   const callbackError = searchParams.get('error');
 
   async function handleSubmit(e: React.FormEvent) {
@@ -26,26 +25,17 @@ function LoginForm() {
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (authError) {
-        if (authError.message === 'Invalid login credentials') {
-          setError('Ungültige Anmeldedaten. Bitte überprüfe E-Mail und Passwort.');
-        } else if (authError.message === 'Email not confirmed') {
-          setError('E-Mail noch nicht bestätigt. Bitte prüfe dein Postfach.');
-        } else {
-          setError(authError.message);
-        }
-        return;
-      }
-
+      await signInWithEmail(email, password);
       router.push('/dashboard');
-    } catch {
-      setError('Ein unerwarteter Fehler ist aufgetreten.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '';
+      if (message.includes('invalid-credential') || message.includes('wrong-password') || message.includes('user-not-found')) {
+        setError('Ungueltige Anmeldedaten. Bitte ueberpruefe E-Mail und Passwort.');
+      } else if (message.includes('too-many-requests')) {
+        setError('Zu viele Anmeldeversuche. Bitte versuche es spaeter erneut.');
+      } else {
+        setError('Ein unerwarteter Fehler ist aufgetreten.');
+      }
     } finally {
       setLoading(false);
     }
@@ -72,10 +62,7 @@ function LoginForm() {
         <form onSubmit={handleSubmit} className="space-y-5">
           {(error || callbackError) && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error ||
-                (callbackError === 'auth_callback_failed'
-                  ? 'Authentifizierung fehlgeschlagen. Bitte versuche es erneut.'
-                  : 'Ein Fehler ist aufgetreten.')}
+              {error || 'Ein Fehler ist aufgetreten.'}
             </div>
           )}
 
@@ -130,7 +117,7 @@ function LoginForm() {
           Demo Login
         </Button>
         <p className="mt-2 text-center text-xs text-gray-400">
-          App mit Beispieldaten erkunden — kein Konto nötig
+          App mit Beispieldaten erkunden - kein Konto noetig
         </p>
 
         <p className="mt-6 text-center text-sm text-gray-500">
@@ -149,7 +136,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Laden...</div>}>
       <LoginForm />
     </Suspense>
   );

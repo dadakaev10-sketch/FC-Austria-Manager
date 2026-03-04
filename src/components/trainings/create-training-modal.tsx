@@ -7,7 +7,7 @@ import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useClubStore } from '@/stores/club-store';
 import { useAuthStore } from '@/stores/auth-store';
-import { createTrainingInDb } from '@/lib/supabase/trainings';
+import { trainingsService } from '@/lib/firebase/services';
 
 interface CreateTrainingModalProps {
   isOpen: boolean;
@@ -31,7 +31,7 @@ export function CreateTrainingModal({ isOpen, onClose, teamId, onSuccess }: Crea
   const [error, setError] = useState<string | null>(null);
 
   const teamOptions = [
-    { value: '', label: 'Mannschaft wählen' },
+    { value: '', label: 'Mannschaft waehlen' },
     ...teams.map((t) => ({ value: t.id, label: `${t.name} (${t.category})` })),
   ];
 
@@ -59,18 +59,17 @@ export function CreateTrainingModal({ isOpen, onClose, teamId, onSuccess }: Crea
     setError(null);
 
     try {
-      const { error: dbError } = await createTrainingInDb({
-        team_id: selectedTeamId,
+      await trainingsService.create({
+        teamId: selectedTeamId,
         date,
-        start_time: startTime,
-        end_time: endTime || null,
-        location: location.trim() || null,
-        focus: focus.trim() || null,
+        startTime,
+        endTime: endTime || '',
+        location: location.trim() || '',
+        focus: focus.trim() || '',
         notes: notes.trim() || null,
-        created_by: profile?.id || null,
+        createdBy: profile?.id || '',
+        createdAt: new Date().toISOString(),
       });
-
-      if (dbError) throw dbError;
 
       handleClose();
       onSuccess?.();
@@ -149,7 +148,7 @@ export function CreateTrainingModal({ isOpen, onClose, teamId, onSuccess }: Crea
           <textarea
             id="training-notes"
             rows={3}
-            placeholder="Zusätzliche Hinweise zum Training..."
+            placeholder="Zusaetzliche Hinweise zum Training..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"

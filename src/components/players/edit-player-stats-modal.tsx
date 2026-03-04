@@ -4,7 +4,7 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { upsertPlayerStats } from '@/lib/supabase/players';
+import { playerStatsService } from '@/lib/firebase/services';
 import type { PlayerStats } from '@/types/database';
 
 interface EditPlayerStatsModalProps {
@@ -15,7 +15,7 @@ interface EditPlayerStatsModalProps {
   onSuccess?: () => void;
 }
 
-const STAT_LABELS: { key: keyof Omit<PlayerStats, 'id' | 'player_id' | 'updated_at'>; label: string }[] = [
+const STAT_LABELS: { key: keyof Omit<PlayerStats, 'id' | 'playerId' | 'updatedAt'>; label: string }[] = [
   { key: 'speed', label: 'Schnelligkeit' },
   { key: 'stamina', label: 'Ausdauer' },
   { key: 'technique', label: 'Technik' },
@@ -23,7 +23,7 @@ const STAT_LABELS: { key: keyof Omit<PlayerStats, 'id' | 'player_id' | 'updated_
   { key: 'shooting', label: 'Schuss' },
   { key: 'dribbling', label: 'Dribbling' },
   { key: 'defense', label: 'Verteidigung' },
-  { key: 'tactical_understanding', label: 'Taktik' },
+  { key: 'tacticalUnderstanding', label: 'Taktik' },
 ];
 
 export function EditPlayerStatsModal({
@@ -41,7 +41,7 @@ export function EditPlayerStatsModal({
     shooting: 50,
     dribbling: 50,
     defense: 50,
-    tactical_understanding: 50,
+    tacticalUnderstanding: 50,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,12 +57,12 @@ export function EditPlayerStatsModal({
         shooting: currentStats.shooting ?? 50,
         dribbling: currentStats.dribbling ?? 50,
         defense: currentStats.defense ?? 50,
-        tactical_understanding: currentStats.tactical_understanding ?? 50,
+        tacticalUnderstanding: currentStats.tacticalUnderstanding ?? 50,
       });
     } else {
       setStats({
         speed: 50, stamina: 50, technique: 50, passing: 50,
-        shooting: 50, dribbling: 50, defense: 50, tactical_understanding: 50,
+        shooting: 50, dribbling: 50, defense: 50, tacticalUnderstanding: 50,
       });
     }
   }, [currentStats, isOpen]);
@@ -77,8 +77,20 @@ export function EditPlayerStatsModal({
     setError(null);
 
     try {
-      const { error: dbError } = await upsertPlayerStats(playerId, stats);
-      if (dbError) throw dbError;
+      if (currentStats?.id) {
+        // Update existing stats
+        await playerStatsService.update(currentStats.id, {
+          ...stats,
+          updatedAt: new Date().toISOString(),
+        });
+      } else {
+        // Create new stats
+        await playerStatsService.create({
+          playerId,
+          ...stats,
+          updatedAt: new Date().toISOString(),
+        });
+      }
 
       onClose();
       onSuccess?.();

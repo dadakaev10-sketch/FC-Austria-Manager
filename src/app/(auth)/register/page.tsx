@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Shield } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { signUpWithEmail } from '@/lib/firebase/auth';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -15,7 +15,6 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -23,34 +22,20 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      const { data, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-          },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-
-      if (authError) {
-        setError(authError.message);
-        return;
+      await signUpWithEmail(email, password, fullName);
+      // Firebase signs in immediately after registration
+      router.push('/dashboard');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '';
+      if (message.includes('email-already-in-use')) {
+        setError('Diese E-Mail-Adresse wird bereits verwendet.');
+      } else if (message.includes('weak-password')) {
+        setError('Das Passwort muss mindestens 6 Zeichen lang sein.');
+      } else if (message.includes('invalid-email')) {
+        setError('Bitte gib eine gueltige E-Mail-Adresse ein.');
+      } else {
+        setError('Ein unerwarteter Fehler ist aufgetreten.');
       }
-
-      // If the user session exists immediately, email confirmation is disabled
-      // → redirect straight to dashboard (onboarding will handle the rest)
-      if (data.session) {
-        router.push('/dashboard');
-        return;
-      }
-
-      // Otherwise, email confirmation is required → show success message
-      setSuccess(true);
-    } catch {
-      setError('Ein unerwarteter Fehler ist aufgetreten.');
     } finally {
       setLoading(false);
     }
@@ -69,89 +54,66 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        {success ? (
-          <div className="text-center">
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-5 text-sm text-emerald-700">
-              <p className="font-medium">Registrierung erfolgreich!</p>
-              <p className="mt-1">
-                Bitte prüfe deine E-Mails und bestätige dein Konto, bevor du
-                dich einloggst.
-              </p>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
             </div>
-            <p className="mt-6 text-sm text-gray-500">
-              Bereits bestätigt?{' '}
-              <Link
-                href="/login"
-                className="font-medium text-emerald-600 hover:text-emerald-500"
-              >
-                Jetzt einloggen
-              </Link>
-            </p>
-          </div>
-        ) : (
-          <>
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {error && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  {error}
-                </div>
-              )}
+          )}
 
-              <Input
-                id="fullName"
-                label="Vollständiger Name"
-                type="text"
-                placeholder="Max Mustermann"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                autoComplete="name"
-              />
+          <Input
+            id="fullName"
+            label="Vollstaendiger Name"
+            type="text"
+            placeholder="Max Hofer"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            required
+            autoComplete="name"
+          />
 
-              <Input
-                id="email"
-                label="E-Mail-Adresse"
-                type="email"
-                placeholder="max@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-              />
+          <Input
+            id="email"
+            label="E-Mail-Adresse"
+            type="email"
+            placeholder="max@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoComplete="email"
+          />
 
-              <Input
-                id="password"
-                label="Passwort"
-                type="password"
-                placeholder="Mindestens 6 Zeichen"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                autoComplete="new-password"
-              />
+          <Input
+            id="password"
+            label="Passwort"
+            type="password"
+            placeholder="Mindestens 6 Zeichen"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={6}
+            autoComplete="new-password"
+          />
 
-              <Button
-                type="submit"
-                className="w-full"
-                size="lg"
-                disabled={loading}
-              >
-                {loading ? 'Konto wird erstellt...' : 'Konto erstellen'}
-              </Button>
-            </form>
+          <Button
+            type="submit"
+            className="w-full"
+            size="lg"
+            disabled={loading}
+          >
+            {loading ? 'Konto wird erstellt...' : 'Konto erstellen'}
+          </Button>
+        </form>
 
-            <p className="mt-6 text-center text-sm text-gray-500">
-              Bereits ein Konto?{' '}
-              <Link
-                href="/login"
-                className="font-medium text-emerald-600 hover:text-emerald-500"
-              >
-                Jetzt einloggen
-              </Link>
-            </p>
-          </>
-        )}
+        <p className="mt-6 text-center text-sm text-gray-500">
+          Bereits ein Konto?{' '}
+          <Link
+            href="/login"
+            className="font-medium text-emerald-600 hover:text-emerald-500"
+          >
+            Jetzt einloggen
+          </Link>
+        </p>
       </div>
     </div>
   );

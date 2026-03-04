@@ -8,18 +8,18 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { useAuthStore } from '@/stores/auth-store';
+import { useClubStore } from '@/stores/club-store';
 import { EditTeamModal } from '@/components/teams/edit-team-modal';
 import { DeleteTeamDialog } from '@/components/teams/delete-team-dialog';
-import { fetchTeamDetail, fetchTeamPlayers } from '@/lib/supabase/teams';
+import { teamsService, playersService } from '@/lib/firebase/services';
 import { isDemoMode } from '@/lib/demo-data';
 import { getPositionAbbreviation, calculateAge } from '@/lib/utils';
+import type { Team, Player } from '@/types/database';
 import {
   ArrowLeft,
   Users,
   Dumbbell,
   Trophy,
-  Mail,
-  Phone,
   Pencil,
   Trash2,
   Plus,
@@ -33,11 +33,10 @@ export default function TeamDetailPage() {
   const router = useRouter();
   const teamId = params.id as string;
   const { hasRole } = useAuthStore();
+  const { teams, playerTeams } = useClubStore();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [team, setTeam] = useState<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [players, setPlayers] = useState<any[]>([]);
+  const [team, setTeam] = useState<Team | null>(null);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('roster');
 
@@ -45,32 +44,38 @@ export default function TeamDetailPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
-  const canManage = hasRole(['admin', 'club_manager']);
+  const canManage = hasRole(['admin', 'manager']);
 
   // Fetch data
   useEffect(() => {
     if (isDemoMode()) {
+      // In demo mode, use store data
+      const demoTeam = teams.find((t) => t.id === teamId) || null;
+      setTeam(demoTeam);
       setIsLoading(false);
       return;
     }
 
     async function load() {
       setIsLoading(true);
-      const [teamRes, playersRes] = await Promise.all([
-        fetchTeamDetail(teamId),
-        fetchTeamPlayers(teamId),
-      ]);
-      if (teamRes.data) setTeam(teamRes.data);
-      if (playersRes.data) setPlayers(playersRes.data);
+      const teamData = await teamsService.getById(teamId);
+      if (teamData) setTeam(teamData);
+
+      // Get players assigned to this team via playerTeams
+      const assignedPlayerIds = playerTeams
+        .filter((pt) => pt.teamId === teamId)
+        .map((pt) => pt.playerId);
+
+      if (assignedPlayerIds.length > 0) {
+        const playerPromises = assignedPlayerIds.map((id) => playersService.getById(id));
+        const playerResults = await Promise.all(playerPromises);
+        setPlayers(playerResults.filter(Boolean) as Player[]);
+      }
+
       setIsLoading(false);
     }
     load();
-  }, [teamId]);
-
-  const refetchPlayers = async () => {
-    const { data } = await fetchTeamPlayers(teamId);
-    if (data) setPlayers(data);
-  };
+  }, [teamId, playerTeams, teams]);
 
   if (isLoading) {
     return (
@@ -88,18 +93,15 @@ export default function TeamDetailPage() {
           className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
         >
           <ArrowLeft className="h-4 w-4" />
-          Zurück zu Teams
+          Zurueck zu Teams
         </Link>
         <div className="py-20 text-center">
           <h2 className="text-lg font-semibold text-gray-900">Team nicht gefunden</h2>
-          <p className="mt-1 text-sm text-gray-500">Dieses Team existiert nicht oder wurde gelöscht.</p>
+          <p className="mt-1 text-sm text-gray-500">Dieses Team existiert nicht oder wurde geloescht.</p>
         </div>
       </div>
     );
   }
-
-  const coach = team.coach;
-  const assistantCoach = team.assistant_coach;
 
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: 'roster', label: 'Kader', icon: Users },
@@ -116,7 +118,7 @@ export default function TeamDetailPage() {
           className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
         >
           <ArrowLeft className="h-4 w-4" />
-          Zurück zu Teams
+          Zurueck zu Teams
         </Link>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -134,88 +136,11 @@ export default function TeamDetailPage() {
               </Button>
               <Button variant="danger" size="sm" onClick={() => setIsDeleteOpen(true)}>
                 <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                Löschen
+                Loeschen
               </Button>
             </div>
           )}
         </div>
-      </div>
-
-      {/* Coach cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {/* Head Coach */}
-        <Card>
-          <CardContent className="flex items-center gap-4 py-4">
-            {coach ? (
-              <>
-                <Avatar name={coach.full_name} size="lg" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Cheftrainer
-                  </p>
-                  <p className="truncate text-base font-semibold text-gray-900">
-                    {coach.full_name}
-                  </p>
-                  <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                    {coach.email && (
-                      <span className="inline-flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        {coach.email}
-                      </span>
-                    )}
-                    {coach.phone && (
-                      <span className="inline-flex items-center gap-1">
-                        <Phone className="h-3 w-3" />
-                        {coach.phone}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex-1 py-2 text-center text-sm text-gray-400">
-                Kein Cheftrainer zugewiesen
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Assistant Coach */}
-        <Card>
-          <CardContent className="flex items-center gap-4 py-4">
-            {assistantCoach ? (
-              <>
-                <Avatar name={assistantCoach.full_name} size="lg" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Co-Trainer
-                  </p>
-                  <p className="truncate text-base font-semibold text-gray-900">
-                    {assistantCoach.full_name}
-                  </p>
-                  <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                    {assistantCoach.email && (
-                      <span className="inline-flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        {assistantCoach.email}
-                      </span>
-                    )}
-                    {assistantCoach.phone && (
-                      <span className="inline-flex items-center gap-1">
-                        <Phone className="h-3 w-3" />
-                        {assistantCoach.phone}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex-1 py-2 text-center text-sm text-gray-400">
-                Kein Co-Trainer zugewiesen
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       {/* Tabs */}
@@ -251,7 +176,7 @@ export default function TeamDetailPage() {
                 <Link href="/players">
                   <Button size="sm">
                     <Plus className="mr-1.5 h-3.5 w-3.5" />
-                    Spieler hinzufügen
+                    Spieler hinzufuegen
                   </Button>
                 </Link>
               )}
@@ -267,7 +192,7 @@ export default function TeamDetailPage() {
                       <th className="px-6 py-3">Name</th>
                       <th className="px-6 py-3">Position</th>
                       <th className="px-6 py-3">Alter</th>
-                      <th className="px-6 py-3">Fuß</th>
+                      <th className="px-6 py-3">Fuss</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -277,7 +202,7 @@ export default function TeamDetailPage() {
                         className="group transition-colors hover:bg-gray-50"
                       >
                         <td className="px-6 py-3 font-semibold text-gray-900">
-                          {player.jersey_number ?? '-'}
+                          {player.jerseyNumber ?? '-'}
                         </td>
                         <td className="px-6 py-3">
                           <Link
@@ -297,10 +222,10 @@ export default function TeamDetailPage() {
                           )}
                         </td>
                         <td className="px-6 py-3 text-gray-600">
-                          {player.date_of_birth ? calculateAge(player.date_of_birth) : '-'}
+                          {player.dateOfBirth ? calculateAge(player.dateOfBirth) : '-'}
                         </td>
                         <td className="px-6 py-3 capitalize text-gray-600">
-                          {player.preferred_foot ?? '-'}
+                          {player.preferredFoot ?? '-'}
                         </td>
                       </tr>
                     ))}
@@ -330,7 +255,7 @@ export default function TeamDetailPage() {
                 Trainingseinheiten
               </h3>
               <p className="max-w-sm text-sm text-gray-500">
-                Trainingseinheiten für dieses Team werden hier angezeigt. Dieses Feature kommt bald.
+                Trainingseinheiten fuer dieses Team werden hier angezeigt.
               </p>
             </div>
           </CardContent>
@@ -348,7 +273,7 @@ export default function TeamDetailPage() {
                 Spielhistorie
               </h3>
               <p className="max-w-sm text-sm text-gray-500">
-                Kommende und vergangene Spiele für dieses Team werden hier angezeigt. Dieses Feature kommt bald.
+                Kommende und vergangene Spiele fuer dieses Team werden hier angezeigt.
               </p>
             </div>
           </CardContent>
@@ -361,7 +286,7 @@ export default function TeamDetailPage() {
         onClose={() => setIsEditOpen(false)}
         team={team}
         onSuccess={async () => {
-          const { data } = await fetchTeamDetail(teamId);
+          const data = await teamsService.getById(teamId);
           if (data) setTeam(data);
         }}
       />

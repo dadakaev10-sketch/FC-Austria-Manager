@@ -15,6 +15,7 @@ import {
   endOfWeek,
   getDay,
 } from 'date-fns';
+import { de } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -31,22 +32,22 @@ import {
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
-// Types
+// Typen
 // ---------------------------------------------------------------------------
 
 interface CalendarEventItem {
   id: string;
   title: string;
   date: string; // YYYY-MM-DD
-  start_time: string;
-  end_time: string | null;
+  startTime: string;
+  endTime: string | null;
   location: string | null;
-  event_type: 'training' | 'match' | 'event';
-  team_name: string;
+  eventType: 'training' | 'match' | 'event';
+  teamName: string;
 }
 
 // ---------------------------------------------------------------------------
-// Mock data -- 15 events spread across the current month
+// Mock-Daten -- 15 Termine ueber den aktuellen Monat verteilt
 // ---------------------------------------------------------------------------
 
 const now = new Date();
@@ -60,153 +61,153 @@ function makeDate(day: number): string {
 const MOCK_EVENTS: CalendarEventItem[] = [
   {
     id: 'e1',
-    title: 'U12 Passing & Movement',
+    title: 'U15 Passspiel & Bewegung',
     date: makeDate(2),
-    start_time: '16:00',
-    end_time: '17:30',
-    location: 'Main Pitch A',
-    event_type: 'training',
-    team_name: 'U12 Development',
+    startTime: '16:00',
+    endTime: '17:30',
+    location: 'Trainingsplatz A',
+    eventType: 'training',
+    teamName: 'U15',
   },
   {
     id: 'e2',
-    title: 'U14 vs FC Adler',
+    title: 'U17 vs FC Rapid Wien II',
     date: makeDate(4),
-    start_time: '10:00',
-    end_time: '12:00',
-    location: 'Home Stadium',
-    event_type: 'match',
-    team_name: 'U14 Academy',
+    startTime: '10:00',
+    endTime: '12:00',
+    location: 'Heimstadion',
+    eventType: 'match',
+    teamName: 'U17',
   },
   {
     id: 'e3',
-    title: 'U10 Ball Control Basics',
+    title: 'U12 Ballkontrolle Grundlagen',
     date: makeDate(5),
-    start_time: '15:00',
-    end_time: '16:00',
-    location: 'Training Ground B',
-    event_type: 'training',
-    team_name: 'U10 Youth',
+    startTime: '15:00',
+    endTime: '16:00',
+    location: 'Trainingsplatz B',
+    eventType: 'training',
+    teamName: 'U12',
   },
   {
     id: 'e4',
-    title: 'Club Board Meeting',
+    title: 'Vereinsvorstandssitzung',
     date: makeDate(6),
-    start_time: '19:00',
-    end_time: '21:00',
-    location: 'Club House',
-    event_type: 'event',
-    team_name: 'Club-wide',
+    startTime: '19:00',
+    endTime: '21:00',
+    location: 'Vereinshaus',
+    eventType: 'event',
+    teamName: 'Vereinsweit',
   },
   {
     id: 'e5',
-    title: 'U12 Tactical Positioning',
+    title: 'U15 Taktische Positionierung',
     date: makeDate(8),
-    start_time: '16:00',
-    end_time: '17:30',
-    location: 'Main Pitch A',
-    event_type: 'training',
-    team_name: 'U12 Development',
+    startTime: '16:00',
+    endTime: '17:30',
+    location: 'Trainingsplatz A',
+    eventType: 'training',
+    teamName: 'U15',
   },
   {
     id: 'e6',
-    title: 'First Team vs SV Stern',
+    title: 'Kampfmannschaft vs SV Mattersburg',
     date: makeDate(10),
-    start_time: '15:30',
-    end_time: '17:30',
-    location: 'Home Stadium',
-    event_type: 'match',
-    team_name: 'First Team',
+    startTime: '15:30',
+    endTime: '17:30',
+    location: 'Heimstadion',
+    eventType: 'match',
+    teamName: 'Kampfmannschaft',
   },
   {
     id: 'e7',
-    title: 'U16 Pressing & Counter-Attack',
+    title: 'U19 Pressing & Konter',
     date: makeDate(12),
-    start_time: '16:00',
-    end_time: '17:30',
-    location: 'Training Ground B',
-    event_type: 'training',
-    team_name: 'U16 Junior',
+    startTime: '16:00',
+    endTime: '17:30',
+    location: 'Trainingsplatz B',
+    eventType: 'training',
+    teamName: 'U19',
   },
   {
     id: 'e8',
-    title: 'Parent Information Evening',
+    title: 'Elterninformationsabend',
     date: makeDate(13),
-    start_time: '18:00',
-    end_time: '20:00',
-    location: 'Club House',
-    event_type: 'event',
-    team_name: 'Club-wide',
+    startTime: '18:00',
+    endTime: '20:00',
+    location: 'Vereinshaus',
+    eventType: 'event',
+    teamName: 'Vereinsweit',
   },
   {
     id: 'e9',
-    title: 'U14 Defensive Shape',
+    title: 'U17 Defensivformation',
     date: makeDate(15),
-    start_time: '17:30',
-    end_time: '19:00',
-    location: 'Main Pitch A',
-    event_type: 'training',
-    team_name: 'U14 Academy',
+    startTime: '17:30',
+    endTime: '19:00',
+    location: 'Trainingsplatz A',
+    eventType: 'training',
+    teamName: 'U17',
   },
   {
     id: 'e10',
-    title: 'U12 vs SC Falken',
+    title: 'U15 vs SC Admira Jugend',
     date: makeDate(17),
-    start_time: '10:00',
-    end_time: '12:00',
-    location: 'Falken Sportpark',
-    event_type: 'match',
-    team_name: 'U12 Development',
+    startTime: '10:00',
+    endTime: '12:00',
+    location: 'Admira Sportpark',
+    eventType: 'match',
+    teamName: 'U15',
   },
   {
     id: 'e11',
-    title: 'First Team Fitness & Conditioning',
+    title: 'Kampfmannschaft Fitness & Kondition',
     date: makeDate(19),
-    start_time: '09:00',
-    end_time: '11:00',
-    location: 'Stadium Pitch',
-    event_type: 'training',
-    team_name: 'First Team',
+    startTime: '09:00',
+    endTime: '11:00',
+    location: 'Stadionplatz',
+    eventType: 'training',
+    teamName: 'Kampfmannschaft',
   },
   {
     id: 'e12',
-    title: 'U10 vs TSV Blitz',
+    title: 'U12 vs SK Sturm Graz Jugend',
     date: makeDate(21),
-    start_time: '09:00',
-    end_time: '11:00',
-    location: 'Blitz Arena',
-    event_type: 'match',
-    team_name: 'U10 Youth',
+    startTime: '09:00',
+    endTime: '11:00',
+    location: 'Sturm Arena',
+    eventType: 'match',
+    teamName: 'U12',
   },
   {
     id: 'e13',
-    title: 'Fundraiser Gala',
+    title: 'Benefiz-Gala',
     date: makeDate(22),
-    start_time: '19:00',
-    end_time: '23:00',
-    location: 'Grand Hall',
-    event_type: 'event',
-    team_name: 'Club-wide',
+    startTime: '19:00',
+    endTime: '23:00',
+    location: 'Festsaal',
+    eventType: 'event',
+    teamName: 'Vereinsweit',
   },
   {
     id: 'e14',
-    title: 'U16 Set Pieces',
+    title: 'U19 Standards',
     date: makeDate(25),
-    start_time: '16:00',
-    end_time: '17:30',
-    location: 'Main Pitch A',
-    event_type: 'training',
-    team_name: 'U16 Junior',
+    startTime: '16:00',
+    endTime: '17:30',
+    location: 'Trainingsplatz A',
+    eventType: 'training',
+    teamName: 'U19',
   },
   {
     id: 'e15',
-    title: 'First Team vs FC Adler',
+    title: 'Kampfmannschaft vs FC Rapid Wien II',
     date: makeDate(28),
-    start_time: '15:30',
-    end_time: '17:30',
-    location: 'Home Stadium',
-    event_type: 'match',
-    team_name: 'First Team',
+    startTime: '15:30',
+    endTime: '17:30',
+    location: 'Heimstadion',
+    eventType: 'match',
+    teamName: 'Kampfmannschaft',
   },
 ];
 
@@ -256,7 +257,20 @@ function getEventIcon(type: string) {
   }
 }
 
-const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+function getEventTypeLabel(type: string) {
+  switch (type) {
+    case 'training':
+      return 'Training';
+    case 'match':
+      return 'Spiel';
+    case 'event':
+      return 'Veranstaltung';
+    default:
+      return type;
+  }
+}
+
+const WEEKDAY_LABELS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
 // ---------------------------------------------------------------------------
 // Page
@@ -267,7 +281,7 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [view, setView] = useState<'month' | 'week'>('month');
 
-  // ---- Build calendar grid days ----
+  // ---- Kalenderraster-Tage erstellen ----
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
@@ -276,7 +290,7 @@ export default function CalendarPage() {
     return eachDayOfInterval({ start: gridStart, end: gridEnd });
   }, [currentDate]);
 
-  // ---- Build week view days ----
+  // ---- Wochenansicht-Tage erstellen ----
   const weekDays = useMemo(() => {
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
     const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
@@ -285,7 +299,7 @@ export default function CalendarPage() {
 
   const displayDays = view === 'month' ? calendarDays : weekDays;
 
-  // ---- Events lookup by date string ----
+  // ---- Termine nach Datum gruppieren ----
   const eventsByDate = useMemo(() => {
     const map: Record<string, CalendarEventItem[]> = {};
     MOCK_EVENTS.forEach((event) => {
@@ -295,14 +309,14 @@ export default function CalendarPage() {
     return map;
   }, []);
 
-  // ---- Selected day events ----
+  // ---- Termine fuer ausgewaehlten Tag ----
   const selectedDayEvents = useMemo(() => {
     if (!selectedDate) return [];
     const key = format(selectedDate, 'yyyy-MM-dd');
     return eventsByDate[key] || [];
   }, [selectedDate, eventsByDate]);
 
-  // ---- Navigation handlers ----
+  // ---- Navigation ----
   function goToPrevious() {
     if (view === 'month') {
       setCurrentDate((prev) => subMonths(prev, 1));
@@ -334,30 +348,30 @@ export default function CalendarPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
+      {/* Seitenkopf */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Calendar</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Kalender</h1>
         <p className="mt-1 text-sm text-gray-500">
-          View trainings, matches, and events across all teams.
+          Trainings, Spiele und Veranstaltungen aller Mannschaften im Ueberblick.
         </p>
       </div>
 
-      {/* Toolbar */}
+      {/* Werkzeugleiste */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={goToPrevious}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button variant="outline" size="sm" onClick={goToToday}>
-            Today
+            Heute
           </Button>
           <Button variant="outline" size="sm" onClick={goToNext}>
             <ChevronRight className="h-4 w-4" />
           </Button>
           <h2 className="ml-2 text-lg font-semibold text-gray-900">
             {view === 'month'
-              ? format(currentDate, 'MMMM yyyy')
-              : `${format(weekDays[0], 'MMM d')} - ${format(weekDays[6], 'MMM d, yyyy')}`}
+              ? format(currentDate, 'MMMM yyyy', { locale: de })
+              : `${format(weekDays[0], 'dd. MMM', { locale: de })} - ${format(weekDays[6], 'dd. MMM yyyy', { locale: de })}`}
           </h2>
         </div>
 
@@ -371,7 +385,7 @@ export default function CalendarPage() {
                 : 'text-gray-600 hover:bg-gray-100'
             )}
           >
-            Month
+            Monat
           </button>
           <button
             onClick={() => setView('week')}
@@ -382,12 +396,12 @@ export default function CalendarPage() {
                 : 'text-gray-600 hover:bg-gray-100'
             )}
           >
-            Week
+            Woche
           </button>
         </div>
       </div>
 
-      {/* Legend */}
+      {/* Legende */}
       <div className="flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-1.5 text-sm text-gray-600">
           <span className="h-3 w-3 rounded-full bg-emerald-500" />
@@ -395,20 +409,20 @@ export default function CalendarPage() {
         </div>
         <div className="flex items-center gap-1.5 text-sm text-gray-600">
           <span className="h-3 w-3 rounded-full bg-blue-500" />
-          Match
+          Spiel
         </div>
         <div className="flex items-center gap-1.5 text-sm text-gray-600">
           <span className="h-3 w-3 rounded-full bg-amber-500" />
-          Event
+          Veranstaltung
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        {/* Calendar grid */}
+        {/* Kalenderraster */}
         <div className="xl:col-span-2">
           <Card>
             <CardContent className="p-4">
-              {/* Weekday headers */}
+              {/* Wochentag-Header */}
               <div className="grid grid-cols-7 gap-px">
                 {WEEKDAY_LABELS.map((day) => (
                   <div
@@ -420,7 +434,7 @@ export default function CalendarPage() {
                 ))}
               </div>
 
-              {/* Day cells */}
+              {/* Tageszellen */}
               <div className="grid grid-cols-7 gap-px rounded-lg border border-gray-200 bg-gray-200">
                 {displayDays.map((day) => {
                   const dateKey = format(day, 'yyyy-MM-dd');
@@ -450,10 +464,10 @@ export default function CalendarPage() {
                         {format(day, 'd')}
                       </span>
 
-                      {/* Event dots / chips */}
+                      {/* Termin-Chips */}
                       <div className="mt-1 flex w-full flex-col gap-0.5">
                         {dayEvents.slice(0, view === 'week' ? 5 : 2).map((event) => {
-                          const colors = EVENT_COLORS[event.event_type];
+                          const colors = EVENT_COLORS[event.eventType];
                           return (
                             <div
                               key={event.id}
@@ -469,7 +483,7 @@ export default function CalendarPage() {
                         })}
                         {dayEvents.length > (view === 'week' ? 5 : 2) && (
                           <span className="px-1 text-[10px] font-medium text-gray-500">
-                            +{dayEvents.length - (view === 'week' ? 5 : 2)} more
+                            +{dayEvents.length - (view === 'week' ? 5 : 2)} weitere
                           </span>
                         )}
                       </div>
@@ -481,15 +495,15 @@ export default function CalendarPage() {
           </Card>
         </div>
 
-        {/* Selected day detail panel */}
+        {/* Detail-Panel fuer ausgewaehlten Tag */}
         <div className="xl:col-span-1">
           <Card className="sticky top-20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <CalendarDays className="h-5 w-5 text-emerald-600" />
                 {selectedDate
-                  ? format(selectedDate, 'EEEE, MMMM d, yyyy')
-                  : 'Select a day'}
+                  ? format(selectedDate, 'EEEE, d. MMMM yyyy', { locale: de })
+                  : 'Tag auswaehlen'}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -497,24 +511,24 @@ export default function CalendarPage() {
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <CalendarDays className="mb-3 h-8 w-8 text-gray-300" />
                   <p className="text-sm text-gray-500">
-                    Click on a day in the calendar to see its events.
+                    Klicke auf einen Tag im Kalender, um seine Termine zu sehen.
                   </p>
                 </div>
               ) : selectedDayEvents.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Calendar className="mb-3 h-8 w-8 text-gray-300" />
                   <p className="text-sm font-medium text-gray-900">
-                    No events scheduled
+                    Keine Termine geplant
                   </p>
                   <p className="mt-1 text-sm text-gray-500">
-                    This day has no trainings, matches, or events.
+                    An diesem Tag sind keine Trainings, Spiele oder Veranstaltungen geplant.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {selectedDayEvents.map((event) => {
-                    const Icon = getEventIcon(event.event_type);
-                    const colors = EVENT_COLORS[event.event_type];
+                    const Icon = getEventIcon(event.eventType);
+                    const colors = EVENT_COLORS[event.eventType];
 
                     return (
                       <div
@@ -529,11 +543,11 @@ export default function CalendarPage() {
                           <div
                             className={cn(
                               'mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg',
-                              event.event_type === 'training' &&
+                              event.eventType === 'training' &&
                                 'bg-emerald-100 text-emerald-600',
-                              event.event_type === 'match' &&
+                              event.eventType === 'match' &&
                                 'bg-blue-100 text-blue-600',
-                              event.event_type === 'event' &&
+                              event.eventType === 'event' &&
                                 'bg-amber-100 text-amber-600'
                             )}
                           >
@@ -547,8 +561,8 @@ export default function CalendarPage() {
                               <div className="flex items-center gap-1.5 text-xs text-gray-600">
                                 <Clock className="h-3 w-3 flex-shrink-0" />
                                 <span>
-                                  {event.start_time}
-                                  {event.end_time && ` - ${event.end_time}`}
+                                  {event.startTime}
+                                  {event.endTime && ` - ${event.endTime}`}
                                 </span>
                               </div>
                               {event.location && (
@@ -559,12 +573,11 @@ export default function CalendarPage() {
                               )}
                             </div>
                             <div className="mt-2 flex items-center gap-2">
-                              <Badge variant={getEventBadgeVariant(event.event_type)}>
-                                {event.event_type.charAt(0).toUpperCase() +
-                                  event.event_type.slice(1)}
+                              <Badge variant={getEventBadgeVariant(event.eventType)}>
+                                {getEventTypeLabel(event.eventType)}
                               </Badge>
                               <span className="text-xs text-gray-500">
-                                {event.team_name}
+                                {event.teamName}
                               </span>
                             </div>
                           </div>

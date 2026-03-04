@@ -4,6 +4,8 @@ import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/auth-store';
 import { useClubStore } from '@/stores/club-store';
+import { subscribeClubPlayers, subscribeAllPlayerTeams } from '@/lib/firebase/services';
+import { isDemoMode } from '@/lib/demo-data';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,13 +16,10 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { AddPlayerModal } from '@/components/players/add-player-modal';
 import { EditPlayerModal } from '@/components/players/edit-player-modal';
 import { DeletePlayerDialog } from '@/components/players/delete-player-dialog';
-import { fetchClubPlayers } from '@/lib/supabase/players';
-import { isDemoMode } from '@/lib/demo-data';
 import { calculateAge, getPositionAbbreviation } from '@/lib/utils';
 import { UserPlus, Search, Filter, Pencil, Trash2, Loader2 } from 'lucide-react';
 import type { Player } from '@/types/database';
 
-// Map positions to general categories for filtering
 function getPositionCategory(position: string): string {
   const defenders = ['center-back', 'left-back', 'right-back', 'defender'];
   const midfielders = ['defensive-midfielder', 'central-midfielder', 'attacking-midfielder', 'midfielder'];
@@ -52,12 +51,9 @@ const POSITION_OPTIONS = [
 
 export default function PlayersPage() {
   const { hasRole } = useAuthStore();
-  const { currentClub, teams } = useClubStore();
+  const { currentClub, teams, players, setPlayers, playerTeams, setPlayerTeams } = useClubStore();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [players, setPlayers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
   const [searchQuery, setSearchQuery] = useState('');
   const [teamFilter, setTeamFilter] = useState('');
   const [positionFilter, setPositionFilter] = useState('');
@@ -67,44 +63,69 @@ export default function PlayersPage() {
   const [editPlayer, setEditPlayer] = useState<Player | null>(null);
   const [deletePlayer, setDeletePlayer] = useState<{ id: string; name: string } | null>(null);
 
-  const canManage = hasRole(['admin', 'club_manager', 'coach']);
+  const canManage = hasRole(['admin', 'manager', 'coach']);
 
   // Build team filter options dynamically
   const teamOptions = useMemo(
     () => [
       { value: '', label: 'Alle Teams' },
-      ...teams.map((t) => ({ value: t.name, label: t.name })),
+      ...teams.map((t) => ({ value: t.id, label: t.name })),
     ],
     [teams]
   );
 
-  // Fetch players
-  const loadPlayers = async () => {
+  // Subscribe to players and player-team assignments
+  useEffect(() => {
     if (!currentClub?.id || isDemoMode()) {
       setIsLoading(false);
       return;
     }
-    setIsLoading(true);
-    const { data } = await fetchClubPlayers(currentClub.id);
-    if (data) setPlayers(data);
-    setIsLoading(false);
-  };
 
-  useEffect(() => {
-    loadPlayers();
-  }, [currentClub?.id]);
+    setIsLoading(true);
+    const unsubPlayers = subscribeClubPlayers(currentClub.id, (data) => {
+      setPlayers(data);
+      setIsLoading(false);
+    });
+
+    const teamIds = teams.map((t) => t.id);
+    let unsubPT: (() => void) | undefined;
+    if (teamIds.length > 0) {
+      unsubPT = subscribeAllPlayerTeams(teamIds, (data) => {
+        setPlayerTeams(data);
+      });
+    }
+
+    return () => {
+      unsubPlayers();
+      unsubPT?.();
+    };
+  }, [currentClub?.id, teams, setPlayers, setPlayerTeams]);
+
+  // Build team name lookup from playerTeams
+  const getPlayerTeamNames = (playerId: string): string => {
+    const assignments = playerTeams.filter((pt) => pt.playerId === playerId);
+    if (assignments.length === 0) return '-';
+    return assignments
+      .map((pt) => {
+        const team = teams.find((t) => t.id === pt.teamId);
+        return team?.name ?? '';
+      })
+      .filter(Boolean)
+      .join(', ');
+  };
 
   // Filter players
   const filteredPlayers = useMemo(() => {
     return players.filter((p) => {
       if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const teamName = (p as any).team?.name || '';
-      if (teamFilter && teamName !== teamFilter) return false;
+      if (teamFilter) {
+        const assignments = playerTeams.filter((pt) => pt.playerId === p.id);
+        if (!assignments.some((pt) => pt.teamId === teamFilter)) return false;
+      }
       if (positionFilter && p.position && getPositionCategory(p.position) !== positionFilter) return false;
       return true;
     });
-  }, [players, searchQuery, teamFilter, positionFilter]);
+  }, [players, playerTeams, searchQuery, teamFilter, positionFilter]);
 
   if (isLoading) {
     return (
@@ -127,7 +148,7 @@ export default function PlayersPage() {
         {canManage && (
           <Button onClick={() => setIsAddOpen(true)}>
             <UserPlus className="mr-2 h-4 w-4" />
-            Spieler hinzufügen
+            Spieler hinzufuegen
           </Button>
         )}
       </div>
@@ -170,7 +191,7 @@ export default function PlayersPage() {
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50/50 text-xs font-medium uppercase tracking-wider text-gray-500">
                     <th className="px-6 py-3">Spieler</th>
-                    <th className="px-6 py-3">Team</th>
+                    <th className="px-6 py-3">Teams</th>
                     <th className="px-6 py-3">Position</th>
                     <th className="px-6 py-3">#</th>
                     <th className="px-6 py-3">Alter</th>
@@ -179,19 +200,18 @@ export default function PlayersPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {filteredPlayers.map((player) => {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const teamName = (player as any).team?.name || '-';
+                    const teamNames = getPlayerTeamNames(player.id);
                     return (
                       <tr key={player.id} className="group transition-colors hover:bg-gray-50">
                         <td className="px-6 py-3">
                           <Link href={`/players/${player.id}`} className="flex items-center gap-3">
-                            <Avatar src={player.photo_url} name={player.name} size="sm" />
+                            <Avatar src={player.photoUrl} name={player.name} size="sm" />
                             <span className="font-medium text-gray-900 group-hover:text-emerald-600">
                               {player.name}
                             </span>
                           </Link>
                         </td>
-                        <td className="px-6 py-3 text-gray-600">{teamName}</td>
+                        <td className="px-6 py-3 text-gray-600">{teamNames}</td>
                         <td className="px-6 py-3">
                           {player.position ? (
                             <Badge variant={getPositionBadgeVariant(player.position)}>
@@ -202,10 +222,10 @@ export default function PlayersPage() {
                           )}
                         </td>
                         <td className="px-6 py-3 font-semibold text-gray-900">
-                          {player.jersey_number ?? '-'}
+                          {player.jerseyNumber ?? '-'}
                         </td>
                         <td className="px-6 py-3 text-gray-600">
-                          {player.date_of_birth ? calculateAge(player.date_of_birth) : '-'}
+                          {player.dateOfBirth ? calculateAge(player.dateOfBirth) : '-'}
                         </td>
                         {canManage && (
                           <td className="px-6 py-3 text-right">
@@ -220,7 +240,7 @@ export default function PlayersPage() {
                               <button
                                 onClick={() => setDeletePlayer({ id: player.id, name: player.name })}
                                 className="rounded-lg p-1.5 hover:bg-red-50"
-                                title="Löschen"
+                                title="Loeschen"
                               >
                                 <Trash2 className="h-3.5 w-3.5 text-red-500" />
                               </button>
@@ -249,8 +269,8 @@ export default function PlayersPage() {
         <EmptyState
           icon={UserPlus}
           title="Noch keine Spieler"
-          description="Füge deinen ersten Spieler hinzu, um mit der Verwaltung zu beginnen."
-          actionLabel={canManage ? 'Spieler hinzufügen' : undefined}
+          description="Fuege deinen ersten Spieler hinzu, um mit der Verwaltung zu beginnen."
+          actionLabel={canManage ? 'Spieler hinzufuegen' : undefined}
           onAction={canManage ? () => setIsAddOpen(true) : undefined}
         />
       )}
@@ -259,19 +279,16 @@ export default function PlayersPage() {
       <AddPlayerModal
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
-        onSuccess={loadPlayers}
       />
       <EditPlayerModal
         isOpen={!!editPlayer}
         onClose={() => setEditPlayer(null)}
         player={editPlayer}
-        onSuccess={loadPlayers}
       />
       <DeletePlayerDialog
         isOpen={!!deletePlayer}
         onClose={() => setDeletePlayer(null)}
         player={deletePlayer}
-        onSuccess={loadPlayers}
       />
     </div>
   );

@@ -7,14 +7,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/auth-store';
+import { useClubStore } from '@/stores/club-store';
 import { EditTrainingModal } from '@/components/trainings/edit-training-modal';
 import { DeleteTrainingDialog } from '@/components/trainings/delete-training-dialog';
 import { AttendanceTracker } from '@/components/trainings/attendance-tracker';
-import { fetchTrainingDetail, fetchTrainingAttendance } from '@/lib/supabase/trainings';
-import { fetchTeamPlayers } from '@/lib/supabase/teams';
+import { trainingsService, subscribeTrainingAttendance, subscribeTeamPlayers, playersService } from '@/lib/firebase/services';
 import { isDemoMode } from '@/lib/demo-data';
 import { formatDate, formatTime } from '@/lib/utils';
-import type { AttendanceStatus } from '@/types/database';
+import type { Training, TrainingAttendance, Player, AttendanceStatus } from '@/types/database';
 import {
   ArrowLeft,
   Dumbbell,
@@ -35,10 +35,11 @@ export default function TrainingDetailPage() {
   const router = useRouter();
   const trainingId = params.id as string;
   const { isCoachOrAbove } = useAuthStore();
+  const { teams, playerTeams } = useClubStore();
 
-  const [training, setTraining] = useState<any>(null);
-  const [teamPlayers, setTeamPlayers] = useState<any[]>([]);
-  const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
+  const [training, setTraining] = useState<Training | null>(null);
+  const [teamPlayers, setTeamPlayers] = useState<Player[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<TrainingAttendance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
 
@@ -57,52 +58,50 @@ export default function TrainingDetailPage() {
 
     async function load() {
       setIsLoading(true);
+      const trainingData = await trainingsService.getById(trainingId);
+      if (trainingData) {
+        setTraining(trainingData);
 
-      const [trainingRes, attendanceRes] = await Promise.all([
-        fetchTrainingDetail(trainingId),
-        fetchTrainingAttendance(trainingId),
-      ]);
+        // Get players assigned to this team via playerTeams
+        const assignedPlayerIds = playerTeams
+          .filter((pt) => pt.teamId === trainingData.teamId)
+          .map((pt) => pt.playerId);
 
-      if (trainingRes.data) {
-        setTraining(trainingRes.data);
-        // Also fetch the team's players for attendance
-        const { data: players } = await fetchTeamPlayers(trainingRes.data.team_id);
-        if (players) setTeamPlayers(players);
+        if (assignedPlayerIds.length > 0) {
+          // Fetch players by IDs
+          const playerPromises = assignedPlayerIds.map((id) => playersService.getById(id));
+          const playerResults = await Promise.all(playerPromises);
+          setTeamPlayers(playerResults.filter(Boolean) as Player[]);
+        }
       }
-
-      if (attendanceRes.data) {
-        setAttendanceRecords(attendanceRes.data);
-      }
-
       setIsLoading(false);
     }
 
     load();
-  }, [trainingId]);
+
+    // Subscribe to attendance changes
+    const unsubAttendance = subscribeTrainingAttendance(trainingId, (records) => {
+      setAttendanceRecords(records);
+    });
+
+    return () => {
+      unsubAttendance();
+    };
+  }, [trainingId, playerTeams]);
 
   // Build initial attendance map from existing records
   const initialAttendance = useMemo(() => {
     const map: Record<string, AttendanceStatus> = {};
-    attendanceRecords.forEach((record: any) => {
-      const playerId = record.player?.id || record.player_id;
-      if (playerId) {
-        map[playerId] = record.status;
+    attendanceRecords.forEach((record) => {
+      if (record.playerId) {
+        map[record.playerId] = record.status;
       }
     });
     return map;
   }, [attendanceRecords]);
 
-  const refetch = async () => {
-    const [trainingRes, attendanceRes] = await Promise.all([
-      fetchTrainingDetail(trainingId),
-      fetchTrainingAttendance(trainingId),
-    ]);
-    if (trainingRes.data) setTraining(trainingRes.data);
-    if (attendanceRes.data) setAttendanceRecords(attendanceRes.data);
-  };
-
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
-    { key: 'overview', label: 'Übersicht', icon: Dumbbell },
+    { key: 'overview', label: 'Uebersicht', icon: Dumbbell },
     { key: 'attendance', label: 'Anwesenheit', icon: Users },
   ];
 
@@ -124,14 +123,14 @@ export default function TrainingDetailPage() {
           className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-900"
         >
           <ArrowLeft className="h-4 w-4" />
-          Zurück zu Trainings
+          Zurueck zu Trainings
         </Link>
         <Card>
           <CardContent className="py-12 text-center">
             <Dumbbell className="mx-auto mb-3 h-8 w-8 text-gray-300" />
             <p className="font-medium text-gray-900">Training nicht gefunden</p>
             <p className="mt-1 text-sm text-gray-500">
-              Dieses Training existiert nicht oder wurde gelöscht.
+              Dieses Training existiert nicht oder wurde geloescht.
             </p>
           </CardContent>
         </Card>
@@ -139,8 +138,9 @@ export default function TrainingDetailPage() {
     );
   }
 
-  const teamName = training.team?.name ?? '–';
-  const teamCategory = training.team?.category ?? '';
+  const team = teams.find((t) => t.id === training.teamId);
+  const teamName = team?.name ?? '-';
+  const teamCategory = team?.category ?? '';
 
   return (
     <div className="space-y-6">
@@ -150,7 +150,7 @@ export default function TrainingDetailPage() {
         className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 transition-colors hover:text-gray-900"
       >
         <ArrowLeft className="h-4 w-4" />
-        Zurück zu Trainings
+        Zurueck zu Trainings
       </Link>
 
       {/* Header */}
@@ -166,8 +166,8 @@ export default function TrainingDetailPage() {
             )}
           </div>
           <p className="mt-1 text-sm text-gray-500">
-            {formatDate(training.date)} · {formatTime(training.start_time)}
-            {training.end_time && ` – ${formatTime(training.end_time)}`}
+            {formatDate(training.date)} - {formatTime(training.startTime)}
+            {training.endTime && ` - ${formatTime(training.endTime)}`}
           </p>
         </div>
 
@@ -183,7 +183,7 @@ export default function TrainingDetailPage() {
               className="text-red-600 hover:bg-red-50 hover:text-red-700"
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              Löschen
+              Loeschen
             </Button>
           </div>
         )}
@@ -223,7 +223,7 @@ export default function TrainingDetailPage() {
               <InfoItem
                 icon={Clock}
                 label="Zeit"
-                value={`${formatTime(training.start_time)}${training.end_time ? ` – ${formatTime(training.end_time)}` : ''}`}
+                value={`${formatTime(training.startTime)}${training.endTime ? ` - ${formatTime(training.endTime)}` : ''}`}
               />
               <InfoItem
                 icon={MapPin}
@@ -263,7 +263,6 @@ export default function TrainingDetailPage() {
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
         training={training}
-        onSuccess={refetch}
       />
       <DeleteTrainingDialog
         isOpen={isDeleteOpen}

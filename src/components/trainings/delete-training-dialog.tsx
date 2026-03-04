@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { deleteTrainingInDb } from '@/lib/supabase/trainings';
+import { trainingsService } from '@/lib/firebase/services';
 
 interface DeleteTrainingDialogProps {
   isOpen: boolean;
@@ -19,9 +19,7 @@ export function DeleteTrainingDialog({ isOpen, onClose, training, onSuccess }: D
     setIsLoading(true);
 
     try {
-      const { error } = await deleteTrainingInDb(training.id);
-      if (error) throw error;
-
+      await trainingsService.delete(training.id);
       onClose();
       onSuccess?.();
     } catch (err) {
@@ -38,9 +36,9 @@ export function DeleteTrainingDialog({ isOpen, onClose, training, onSuccess }: D
       isOpen={isOpen}
       onClose={onClose}
       onConfirm={handleConfirm}
-      title="Training löschen"
-      message={`Das Training „${label}" und alle zugehörigen Anwesenheitsdaten werden unwiderruflich gelöscht.`}
-      confirmLabel="Training löschen"
+      title="Training loeschen"
+      message={`Das Training "${label}" und alle zugehoerigen Anwesenheitsdaten werden unwiderruflich geloescht.`}
+      confirmLabel="Training loeschen"
       isLoading={isLoading}
     />
   );

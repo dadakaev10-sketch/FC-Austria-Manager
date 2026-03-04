@@ -12,9 +12,12 @@ import { EditPlayerModal } from '@/components/players/edit-player-modal';
 import { DeletePlayerDialog } from '@/components/players/delete-player-dialog';
 import { EditPlayerStatsModal } from '@/components/players/edit-player-stats-modal';
 import { useAuthStore } from '@/stores/auth-store';
-import { fetchPlayerDetail, fetchPlayerRatings } from '@/lib/supabase/players';
+import { useClubStore } from '@/stores/club-store';
+import { playersService, playerStatsService } from '@/lib/firebase/services';
 import { isDemoMode } from '@/lib/demo-data';
-import { calculateAge, getPositionAbbreviation, formatDate } from '@/lib/utils';
+import { calculateAge, getPositionAbbreviation } from '@/lib/utils';
+import { where } from 'firebase/firestore';
+import type { Player, PlayerStats } from '@/types/database';
 import {
   ArrowLeft,
   Mail,
@@ -36,11 +39,10 @@ export default function PlayerDetailPage() {
   const router = useRouter();
   const playerId = params.id as string;
   const { hasRole } = useAuthStore();
+  const { teams, playerTeams } = useClubStore();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [player, setPlayer] = useState<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [ratings, setRatings] = useState<any[]>([]);
+  const [player, setPlayer] = useState<Player | null>(null);
+  const [stats, setStats] = useState<PlayerStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Modals
@@ -48,7 +50,7 @@ export default function PlayerDetailPage() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
 
-  const canManage = hasRole(['admin', 'club_manager', 'coach']);
+  const canManage = hasRole(['admin', 'manager', 'coach']);
 
   const loadData = async () => {
     if (isDemoMode()) {
@@ -56,18 +58,41 @@ export default function PlayerDetailPage() {
       return;
     }
     setIsLoading(true);
-    const [playerRes, ratingsRes] = await Promise.all([
-      fetchPlayerDetail(playerId),
-      fetchPlayerRatings(playerId),
-    ]);
-    if (playerRes.data) setPlayer(playerRes.data);
-    if (ratingsRes.data) setRatings(ratingsRes.data);
+
+    const playerData = await playersService.getById(playerId);
+    if (playerData) setPlayer(playerData);
+
+    // Fetch stats (subscribe for real-time)
+    const unsubStats = playerStatsService.subscribeCustom(
+      (statsArr) => {
+        if (statsArr.length > 0) setStats(statsArr[0]);
+      },
+      [where('playerId', '==', playerId)]
+    );
+
     setIsLoading(false);
+    return unsubStats;
   };
 
   useEffect(() => {
-    loadData();
+    let unsubStats: (() => void) | undefined;
+    loadData().then((unsub) => {
+      unsubStats = unsub;
+    });
+    return () => {
+      unsubStats?.();
+    };
   }, [playerId]);
+
+  // Get team names from playerTeams
+  const playerTeamNames = playerTeams
+    .filter((pt) => pt.playerId === playerId)
+    .map((pt) => {
+      const team = teams.find((t) => t.id === pt.teamId);
+      return team?.name || '';
+    })
+    .filter(Boolean)
+    .join(', ') || '-';
 
   if (isLoading) {
     return (
@@ -82,19 +107,15 @@ export default function PlayerDetailPage() {
       <div className="space-y-4">
         <Link href="/players" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
           <ArrowLeft className="h-4 w-4" />
-          Zurück zu Spieler
+          Zurueck zu Spieler
         </Link>
         <div className="py-20 text-center">
           <h2 className="text-lg font-semibold text-gray-900">Spieler nicht gefunden</h2>
-          <p className="mt-1 text-sm text-gray-500">Dieser Spieler existiert nicht oder wurde gelöscht.</p>
+          <p className="mt-1 text-sm text-gray-500">Dieser Spieler existiert nicht oder wurde geloescht.</p>
         </div>
       </div>
     );
   }
-
-  // Extract stats (Supabase returns array for one-to-many, even if unique)
-  const stats = Array.isArray(player.stats) ? player.stats[0] ?? null : player.stats ?? null;
-  const teamName = player.team?.name || '-';
 
   const statEntries = stats
     ? [
@@ -105,7 +126,7 @@ export default function PlayerDetailPage() {
         { label: 'Schuss', value: stats.shooting },
         { label: 'Dribbling', value: stats.dribbling },
         { label: 'Verteidigung', value: stats.defense },
-        { label: 'Taktik', value: stats.tactical_understanding },
+        { label: 'Taktik', value: stats.tacticalUnderstanding },
       ]
     : [];
 
@@ -114,7 +135,7 @@ export default function PlayerDetailPage() {
       {/* Back link */}
       <Link href="/players" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
         <ArrowLeft className="h-4 w-4" />
-        Zurück zu Spieler
+        Zurueck zu Spieler
       </Link>
 
       {/* Player profile card */}
@@ -122,7 +143,7 @@ export default function PlayerDetailPage() {
         <CardContent className="py-6">
           <div className="flex flex-col gap-6 sm:flex-row">
             <div className="flex flex-col items-center sm:items-start">
-              <Avatar src={player.photo_url} name={player.name} size="lg" className="h-24 w-24 text-2xl" />
+              <Avatar src={player.photoUrl} name={player.name} size="lg" className="h-24 w-24 text-2xl" />
             </div>
 
             <div className="flex-1 space-y-4">
@@ -134,7 +155,7 @@ export default function PlayerDetailPage() {
                       <Badge variant="info">{getPositionAbbreviation(player.position)}</Badge>
                     )}
                   </div>
-                  <p className="mt-1 text-sm text-gray-500">{teamName}</p>
+                  <p className="mt-1 text-sm text-gray-500">{playerTeamNames}</p>
                 </div>
 
                 {canManage && (
@@ -145,31 +166,31 @@ export default function PlayerDetailPage() {
                     </Button>
                     <Button variant="danger" size="sm" onClick={() => setIsDeleteOpen(true)}>
                       <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                      Löschen
+                      Loeschen
                     </Button>
                   </div>
                 )}
               </div>
 
               <div className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
-                {player.jersey_number != null && (
+                {player.jerseyNumber != null && (
                   <div className="flex items-center gap-2 text-sm">
                     <Shirt className="h-4 w-4 text-gray-400" />
                     <span className="text-gray-500">Trikot</span>
-                    <span className="font-semibold text-gray-900">#{player.jersey_number}</span>
+                    <span className="font-semibold text-gray-900">#{player.jerseyNumber}</span>
                   </div>
                 )}
-                {player.date_of_birth && (
+                {player.dateOfBirth && (
                   <div className="flex items-center gap-2 text-sm">
                     <Calendar className="h-4 w-4 text-gray-400" />
                     <span className="text-gray-500">Alter</span>
-                    <span className="font-semibold text-gray-900">{calculateAge(player.date_of_birth)}</span>
+                    <span className="font-semibold text-gray-900">{calculateAge(player.dateOfBirth)}</span>
                   </div>
                 )}
                 {player.height && (
                   <div className="flex items-center gap-2 text-sm">
                     <Ruler className="h-4 w-4 text-gray-400" />
-                    <span className="text-gray-500">Größe</span>
+                    <span className="text-gray-500">Groesse</span>
                     <span className="font-semibold text-gray-900">{player.height} cm</span>
                   </div>
                 )}
@@ -180,11 +201,11 @@ export default function PlayerDetailPage() {
                     <span className="font-semibold text-gray-900">{player.weight} kg</span>
                   </div>
                 )}
-                {player.preferred_foot && (
+                {player.preferredFoot && (
                   <div className="flex items-center gap-2 text-sm">
                     <Footprints className="h-4 w-4 text-gray-400" />
-                    <span className="text-gray-500">Fuß</span>
-                    <span className="font-semibold capitalize text-gray-900">{player.preferred_foot}</span>
+                    <span className="text-gray-500">Fuss</span>
+                    <span className="font-semibold capitalize text-gray-900">{player.preferredFoot}</span>
                   </div>
                 )}
               </div>
@@ -192,25 +213,25 @@ export default function PlayerDetailPage() {
               {/* Contact info */}
               <div className="border-t border-gray-100 pt-3">
                 <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                  {player.contact_email && (
+                  {player.contactEmail && (
                     <span className="inline-flex items-center gap-1">
                       <Mail className="h-3.5 w-3.5" />
-                      {player.contact_email}
+                      {player.contactEmail}
                     </span>
                   )}
-                  {player.contact_phone && (
+                  {player.contactPhone && (
                     <span className="inline-flex items-center gap-1">
                       <Phone className="h-3.5 w-3.5" />
-                      {player.contact_phone}
+                      {player.contactPhone}
                     </span>
                   )}
                 </div>
-                {player.parent_name && (
+                {player.parentName && (
                   <div className="mt-2 text-sm text-gray-400">
                     <span className="font-medium text-gray-500">Eltern:</span>{' '}
-                    {player.parent_name}
-                    {player.parent_email && ` - ${player.parent_email}`}
-                    {player.parent_phone && ` - ${player.parent_phone}`}
+                    {player.parentName}
+                    {player.parentEmail && ` - ${player.parentEmail}`}
+                    {player.parentPhone && ` - ${player.parentPhone}`}
                   </div>
                 )}
               </div>
@@ -250,58 +271,15 @@ export default function PlayerDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Performance Ratings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-emerald-600" />
-            Bewertungen
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {ratings.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50/50 text-xs font-medium uppercase tracking-wider text-gray-500">
-                    <th className="px-6 py-3">Datum</th>
-                    <th className="px-6 py-3">Kontext</th>
-                    <th className="px-6 py-3">Notiz</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {ratings.map((rating) => (
-                    <tr key={rating.id} className="transition-colors hover:bg-gray-50">
-                      <td className="px-6 py-3 text-gray-600">
-                        {formatDate(rating.created_at)}
-                      </td>
-                      <td className="px-6 py-3">
-                        <Badge variant={rating.context_type === 'match' ? 'info' : 'success'}>
-                          {rating.context_type === 'match' ? 'Spiel' : 'Training'}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-3 text-gray-600">
-                        {rating.overall_notes || '-'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="py-8 text-center text-sm text-gray-400">
-              Noch keine Bewertungen vorhanden.
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Modals */}
       <EditPlayerModal
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
         player={player}
-        onSuccess={loadData}
+        onSuccess={async () => {
+          const data = await playersService.getById(playerId);
+          if (data) setPlayer(data);
+        }}
       />
       <DeletePlayerDialog
         isOpen={isDeleteOpen}
@@ -314,7 +292,10 @@ export default function PlayerDetailPage() {
         onClose={() => setIsStatsOpen(false)}
         playerId={playerId}
         currentStats={stats}
-        onSuccess={loadData}
+        onSuccess={async () => {
+          const data = await playersService.getById(playerId);
+          if (data) setPlayer(data);
+        }}
       />
     </div>
   );

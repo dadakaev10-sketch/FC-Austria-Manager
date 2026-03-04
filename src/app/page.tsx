@@ -1,20 +1,35 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+'use client';
 
-export default async function HomePage() {
-  // If Supabase is not configured, redirect to login
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    redirect('/login');
-  }
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { onAuthChange } from '@/lib/firebase/auth';
+import { isDemoMode } from '@/lib/demo-data';
+import { Loader2 } from 'lucide-react';
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export default function HomePage() {
+  const router = useRouter();
 
-  if (user) {
-    redirect('/dashboard');
-  } else {
-    redirect('/login');
-  }
+  useEffect(() => {
+    // Demo mode: go straight to dashboard
+    if (isDemoMode()) {
+      router.push('/dashboard');
+      return;
+    }
+
+    const unsubscribe = onAuthChange((user) => {
+      if (user) {
+        router.push('/dashboard');
+      } else {
+        router.push('/login');
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+    </div>
+  );
 }

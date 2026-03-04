@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useClubStore } from '@/stores/club-store';
-import { createTeamInDb, fetchClubStaff } from '@/lib/supabase/teams';
+import { teamsService } from '@/lib/firebase/services';
 import { isDemoMode } from '@/lib/demo-data';
+import type { TeamCategory } from '@/types/database';
 
 interface CreateTeamModalProps {
   isOpen: boolean;
@@ -16,19 +17,21 @@ interface CreateTeamModalProps {
 }
 
 const CATEGORY_OPTIONS = [
-  { value: '', label: 'Kategorie wählen' },
+  { value: '', label: 'Kategorie waehlen' },
   { value: 'U8', label: 'U8' },
   { value: 'U10', label: 'U10' },
   { value: 'U12', label: 'U12' },
   { value: 'U14', label: 'U14' },
-  { value: 'U16', label: 'U16' },
-  { value: 'U18', label: 'U18' },
-  { value: 'B Team', label: 'B Team' },
-  { value: 'First Team', label: 'Erste Mannschaft' },
+  { value: 'U15', label: 'U15' },
+  { value: 'U17', label: 'U17' },
+  { value: 'U19', label: 'U19' },
+  { value: 'U21', label: 'U21' },
+  { value: 'Kampfmannschaft', label: 'Kampfmannschaft' },
+  { value: 'Reserve', label: 'Reserve' },
 ];
 
 const SEASON_OPTIONS = [
-  { value: '', label: 'Saison wählen' },
+  { value: '', label: 'Saison waehlen' },
   { value: '2025/2026', label: '2025/2026' },
   { value: '2026/2027', label: '2026/2027' },
 ];
@@ -37,36 +40,13 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTeamModalP
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [season, setSeason] = useState('');
-  const [coachId, setCoachId] = useState('');
-  const [assistantCoachId, setAssistantCoachId] = useState('');
-  const [staffOptions, setStaffOptions] = useState<{ value: string; label: string }[]>([
-    { value: '', label: 'Trainer wählen' },
-  ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Fetch real staff when modal opens
-  useEffect(() => {
-    if (!isOpen || isDemoMode()) return;
-    const clubId = useClubStore.getState().currentClub?.id;
-    if (!clubId) return;
-
-    fetchClubStaff(clubId).then(({ data }) => {
-      if (data) {
-        setStaffOptions([
-          { value: '', label: 'Trainer wählen' },
-          ...data.map((p) => ({ value: p.id, label: p.full_name })),
-        ]);
-      }
-    });
-  }, [isOpen]);
 
   const resetForm = () => {
     setName('');
     setCategory('');
     setSeason('');
-    setCoachId('');
-    setAssistantCoachId('');
     setError(null);
   };
 
@@ -84,21 +64,36 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTeamModalP
 
     try {
       const clubId = useClubStore.getState().currentClub?.id;
-      if (!clubId) throw new Error('Kein Verein ausgewählt');
+      if (!clubId) throw new Error('Kein Verein ausgewaehlt');
 
-      const { data, error: dbError } = await createTeamInDb({
-        club_id: clubId,
-        name: name.trim(),
-        category,
-        season,
-        coach_id: coachId || null,
-        assistant_coach_id: assistantCoachId || null,
-      });
-
-      if (dbError) throw dbError;
-      if (data) {
-        useClubStore.getState().addTeam(data);
+      if (isDemoMode()) {
+        // In demo mode, just add to store directly
+        const demoTeam = {
+          id: `demo-team-${Date.now()}`,
+          clubId,
+          name: name.trim(),
+          category: category as TeamCategory,
+          season,
+          coachId: null,
+          assistantCoachId: null,
+          createdAt: new Date().toISOString(),
+        };
+        useClubStore.getState().addTeam(demoTeam);
+        handleClose();
+        onSuccess?.();
+        return;
       }
+
+      // Create in Firestore (real-time listener will update the store)
+      await teamsService.create({
+        clubId,
+        name: name.trim(),
+        category: category as TeamCategory,
+        season,
+        coachId: null,
+        assistantCoachId: null,
+        createdAt: new Date().toISOString(),
+      });
 
       handleClose();
       onSuccess?.();
@@ -121,7 +116,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTeamModalP
         <Input
           id="team-name"
           label="Teamname"
-          placeholder="z.B. U12 Entwicklung"
+          placeholder="z.B. U15 Jugend"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
@@ -143,22 +138,6 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTeamModalP
           value={season}
           onChange={(e) => setSeason(e.target.value)}
           required
-        />
-
-        <Select
-          id="team-coach"
-          label="Cheftrainer"
-          options={staffOptions}
-          value={coachId}
-          onChange={(e) => setCoachId(e.target.value)}
-        />
-
-        <Select
-          id="team-assistant-coach"
-          label="Co-Trainer"
-          options={staffOptions}
-          value={assistantCoachId}
-          onChange={(e) => setAssistantCoachId(e.target.value)}
         />
 
         <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">

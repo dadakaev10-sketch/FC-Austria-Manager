@@ -1,8 +1,8 @@
 // ============================================================================
-// Football Club Management Platform - Database Types
+// Football Club Management Platform - Database Types (Firebase / Firestore)
 // ============================================================================
 
-export type UserRole = 'admin' | 'club_manager' | 'coach' | 'assistant_coach' | 'player' | 'parent';
+export type UserRole = 'admin' | 'manager' | 'coach' | 'assistant_coach' | 'player' | 'parent';
 
 export type AttendanceStatus = 'present' | 'late' | 'injured' | 'absent';
 
@@ -14,6 +14,33 @@ export type MatchEventType = 'goal' | 'assist' | 'card' | 'substitution';
 
 export type AnnouncementType = 'general' | 'training_reminder' | 'match_reminder' | 'parent_message';
 
+export type TeamCategory =
+  | 'U8'
+  | 'U10'
+  | 'U12'
+  | 'U14'
+  | 'U15'
+  | 'U17'
+  | 'U19'
+  | 'U21'
+  | 'Kampfmannschaft'
+  | 'Reserve';
+
+// ============================================================================
+// User Profile (stored at users/{uid})
+// ============================================================================
+
+export interface Profile {
+  id: string;
+  clubId: string | null;
+  fullName: string;
+  email: string;
+  role: UserRole;
+  avatarUrl: string | null;
+  phone: string | null;
+  createdAt: string;
+}
+
 // ============================================================================
 // Core Entities
 // ============================================================================
@@ -21,82 +48,78 @@ export type AnnouncementType = 'general' | 'training_reminder' | 'match_reminder
 export interface Club {
   id: string;
   name: string;
-  logo_url: string | null;
+  logoUrl: string | null;
   address: string | null;
   city: string | null;
   country: string | null;
-  founded_year: number | null;
+  foundedYear: number | null;
   website: string | null;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
 }
 
 export interface Team {
   id: string;
-  club_id: string;
+  clubId: string;
   name: string;
-  category: string; // e.g. "U8", "U10", "First Team"
-  season: string; // e.g. "2025/2026"
-  coach_id: string | null;
-  assistant_coach_id: string | null;
-  created_at: string;
-  updated_at: string;
-  // Joined
-  club?: Club;
+  category: TeamCategory;
+  season: string;
+  coachId: string | null;
+  assistantCoachId: string | null;
+  createdAt: string;
+  // Joined (client-side enrichment)
   coach?: Profile;
-  assistant_coach?: Profile;
-  players?: Player[];
+  assistantCoach?: Profile;
+  playerCount?: number;
 }
 
+/**
+ * Player profile. Note: there is NO teamId here.
+ * Team assignments are managed via the PlayerTeam junction collection.
+ */
 export interface Player {
   id: string;
-  team_id: string;
-  user_id: string | null;
+  clubId: string;
   name: string;
-  date_of_birth: string;
-  position: string;
-  preferred_foot: 'left' | 'right' | 'both';
-  height: number | null; // cm
-  weight: number | null; // kg
-  jersey_number: number | null;
-  contact_email: string | null;
-  contact_phone: string | null;
-  parent_name: string | null;
-  parent_email: string | null;
-  parent_phone: string | null;
-  photo_url: string | null;
-  created_at: string;
-  updated_at: string;
-  // Joined
-  team?: Team;
+  dateOfBirth: string | null;
+  position: string | null;
+  preferredFoot: 'left' | 'right' | 'both' | null;
+  height: number | null;
+  weight: number | null;
+  jerseyNumber: number | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  parentName: string | null;
+  parentEmail: string | null;
+  parentPhone: string | null;
+  photoUrl: string | null;
+  createdAt: string;
+  // Client-side enrichment
+  teams?: Team[];
   stats?: PlayerStats;
-  ratings?: PlayerRating[];
+}
+
+/**
+ * Many-to-many junction: a player can belong to multiple teams.
+ */
+export interface PlayerTeam {
+  id: string;
+  playerId: string;
+  teamId: string;
+  assignedAt: string;
 }
 
 export interface PlayerStats {
   id: string;
-  player_id: string;
-  speed: number; // 1-100
+  playerId: string;
+  speed: number;
   stamina: number;
   technique: number;
   passing: number;
   shooting: number;
   dribbling: number;
   defense: number;
-  tactical_understanding: number;
-  updated_at: string;
-}
-
-export interface Profile {
-  id: string;          // Same as auth.users.id
-  club_id: string | null;
-  full_name: string;
-  email: string;
-  role: UserRole;
-  avatar_url: string | null;
-  phone: string | null;
-  created_at: string;
-  updated_at: string;
+  tacticalUnderstanding: number;
+  updatedAt: string;
 }
 
 // ============================================================================
@@ -105,16 +128,15 @@ export interface Profile {
 
 export interface Training {
   id: string;
-  team_id: string;
+  teamId: string;
   date: string;
-  start_time: string;
-  end_time: string;
+  startTime: string;
+  endTime: string;
   location: string;
   focus: string;
   notes: string | null;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
+  createdBy: string;
+  createdAt: string;
   // Joined
   team?: Team;
   attendance?: TrainingAttendance[];
@@ -122,11 +144,10 @@ export interface Training {
 
 export interface TrainingAttendance {
   id: string;
-  training_id: string;
-  player_id: string;
+  trainingId: string;
+  playerId: string;
   status: AttendanceStatus;
   notes: string | null;
-  created_at: string;
   // Joined
   player?: Player;
 }
@@ -137,19 +158,18 @@ export interface TrainingAttendance {
 
 export interface Match {
   id: string;
-  team_id: string;
+  teamId: string;
   opponent: string;
   competition: string | null;
   date: string;
   time: string;
   location: string | null;
-  home_or_away: MatchLocation;
-  score_home: number | null;
-  score_away: number | null;
+  homeOrAway: MatchLocation;
+  scoreHome: number | null;
+  scoreAway: number | null;
   notes: string | null;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
+  createdBy: string;
+  createdAt: string;
   // Joined
   team?: Team;
   events?: MatchEvent[];
@@ -157,34 +177,12 @@ export interface Match {
 
 export interface MatchEvent {
   id: string;
-  match_id: string;
-  player_id: string;
-  event_type: MatchEventType;
+  matchId: string;
+  playerId: string;
+  eventType: MatchEventType;
   minute: number;
-  details: string | null; // e.g. "penalty", "header" for goals; card type for cards
-  created_at: string;
-  // Joined
-  player?: Player;
-}
-
-// ============================================================================
-// Player Ratings
-// ============================================================================
-
-export interface PlayerRating {
-  id: string;
-  player_id: string;
-  rated_by: string;
-  context_type: 'training' | 'match';
-  context_id: string; // training_id or match_id
-  speed: number; // 1-10
-  technique: number;
-  passing: number;
-  shooting: number;
-  defense: number;
-  tactical_awareness: number;
-  overall_notes: string | null;
-  created_at: string;
+  details: string | null;
+  createdAt: string;
   // Joined
   player?: Player;
 }
@@ -193,44 +191,30 @@ export interface PlayerRating {
 // Calendar & Communication
 // ============================================================================
 
-export interface CalendarEvent {
-  id: string;
-  club_id: string;
-  team_id: string | null;
-  title: string;
-  description: string | null;
-  event_type: 'training' | 'match' | 'event';
-  date: string;
-  start_time: string;
-  end_time: string | null;
-  location: string | null;
-  created_by: string;
-  created_at: string;
-}
-
 export interface Announcement {
   id: string;
-  club_id: string;
-  team_id: string | null;
-  author_id: string;
+  clubId: string;
+  teamId: string | null;
+  authorId: string;
   title: string;
   content: string;
-  announcement_type: AnnouncementType;
-  is_pinned: boolean;
-  created_at: string;
-  updated_at: string;
+  type: AnnouncementType;
+  isPinned: boolean;
+  createdAt: string;
   // Joined
   author?: Profile;
 }
 
-// ============================================================================
-// Membership (links users to teams with roles)
-// ============================================================================
-
-export interface TeamMembership {
+export interface CalendarEvent {
   id: string;
-  team_id: string;
-  user_id: string;
-  role: UserRole;
-  created_at: string;
+  clubId: string;
+  teamId: string | null;
+  title: string;
+  description: string | null;
+  eventType: 'training' | 'match' | 'event';
+  date: string;
+  startTime: string;
+  endTime: string | null;
+  location: string | null;
+  createdAt: string;
 }

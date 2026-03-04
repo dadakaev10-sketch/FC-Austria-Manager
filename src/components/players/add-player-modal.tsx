@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useClubStore } from '@/stores/club-store';
-import { createPlayerInDb } from '@/lib/supabase/players';
+import { playersService, playerTeamsService } from '@/lib/firebase/services';
+import { isDemoMode } from '@/lib/demo-data';
 
 interface AddPlayerModalProps {
   isOpen: boolean;
@@ -16,7 +17,7 @@ interface AddPlayerModalProps {
 }
 
 const POSITION_OPTIONS = [
-  { value: '', label: 'Position wählen' },
+  { value: '', label: 'Position waehlen' },
   { value: 'goalkeeper', label: 'Torwart' },
   { value: 'center-back', label: 'Innenverteidiger' },
   { value: 'left-back', label: 'Linker Verteidiger' },
@@ -24,23 +25,23 @@ const POSITION_OPTIONS = [
   { value: 'defensive-midfielder', label: 'Defensives Mittelfeld' },
   { value: 'central-midfielder', label: 'Zentrales Mittelfeld' },
   { value: 'attacking-midfielder', label: 'Offensives Mittelfeld' },
-  { value: 'left-winger', label: 'Linksaußen' },
-  { value: 'right-winger', label: 'Rechtsaußen' },
-  { value: 'striker', label: 'Stürmer' },
+  { value: 'left-winger', label: 'Linksaussen' },
+  { value: 'right-winger', label: 'Rechtsaussen' },
+  { value: 'striker', label: 'Stuermer' },
 ];
 
 const FOOT_OPTIONS = [
-  { value: '', label: 'Fuß wählen' },
+  { value: '', label: 'Fuss waehlen' },
   { value: 'right', label: 'Rechts' },
   { value: 'left', label: 'Links' },
-  { value: 'both', label: 'Beidfüßig' },
+  { value: 'both', label: 'Beidfuessig' },
 ];
 
 export function AddPlayerModal({ isOpen, onClose, teamId, onSuccess }: AddPlayerModalProps) {
-  const { teams } = useClubStore();
+  const { teams, currentClub } = useClubStore();
 
   const [name, setName] = useState('');
-  const [selectedTeamId, setSelectedTeamId] = useState(teamId || '');
+  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>(teamId ? [teamId] : []);
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [position, setPosition] = useState('');
   const [preferredFoot, setPreferredFoot] = useState('');
@@ -56,14 +57,9 @@ export function AddPlayerModal({ isOpen, onClose, teamId, onSuccess }: AddPlayer
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const teamOptions = [
-    { value: '', label: 'Team wählen' },
-    ...teams.map((t) => ({ value: t.id, label: `${t.name} (${t.category})` })),
-  ];
-
   const resetForm = () => {
     setName('');
-    setSelectedTeamId(teamId || '');
+    setSelectedTeamIds(teamId ? [teamId] : []);
     setDateOfBirth('');
     setPosition('');
     setPreferredFoot('');
@@ -83,43 +79,99 @@ export function AddPlayerModal({ isOpen, onClose, teamId, onSuccess }: AddPlayer
     onClose();
   };
 
+  const toggleTeam = (tId: string) => {
+    setSelectedTeamIds((prev) =>
+      prev.includes(tId) ? prev.filter((id) => id !== tId) : [...prev, tId]
+    );
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !selectedTeamId) return;
+    if (!name.trim() || selectedTeamIds.length === 0) return;
 
     setIsSubmitting(true);
     setError(null);
 
     try {
-      const { data, error: dbError } = await createPlayerInDb({
-        team_id: selectedTeamId,
+      const clubId = currentClub?.id;
+      if (!clubId) throw new Error('Kein Verein ausgewaehlt');
+
+      if (isDemoMode()) {
+        const demoPlayerId = `demo-player-${Date.now()}`;
+        const demoPlayer = {
+          id: demoPlayerId,
+          clubId,
+          name: name.trim(),
+          dateOfBirth: dateOfBirth || null,
+          position: position || null,
+          preferredFoot: (preferredFoot as 'left' | 'right' | 'both') || null,
+          jerseyNumber: jerseyNumber ? parseInt(jerseyNumber) : null,
+          height: height ? parseFloat(height) : null,
+          weight: weight ? parseFloat(weight) : null,
+          contactEmail: contactEmail.trim() || null,
+          contactPhone: contactPhone.trim() || null,
+          parentName: parentName.trim() || null,
+          parentEmail: parentEmail.trim() || null,
+          parentPhone: parentPhone.trim() || null,
+          photoUrl: null,
+          createdAt: new Date().toISOString(),
+        };
+        useClubStore.getState().addPlayer(demoPlayer);
+
+        // Create PlayerTeam entries for each selected team
+        for (const tId of selectedTeamIds) {
+          useClubStore.getState().addPlayerTeam({
+            id: `demo-pt-${Date.now()}-${tId}`,
+            playerId: demoPlayerId,
+            teamId: tId,
+            assignedAt: new Date().toISOString(),
+          });
+        }
+
+        handleClose();
+        onSuccess?.();
+        return;
+      }
+
+      // Create the player in Firestore
+      const playerId = await playersService.create({
+        clubId,
         name: name.trim(),
-        date_of_birth: dateOfBirth || null,
+        dateOfBirth: dateOfBirth || null,
         position: position || null,
-        preferred_foot: (preferredFoot as 'left' | 'right' | 'both') || null,
-        jersey_number: jerseyNumber ? parseInt(jerseyNumber) : null,
+        preferredFoot: (preferredFoot as 'left' | 'right' | 'both') || null,
+        jerseyNumber: jerseyNumber ? parseInt(jerseyNumber) : null,
         height: height ? parseFloat(height) : null,
         weight: weight ? parseFloat(weight) : null,
-        contact_email: contactEmail.trim() || null,
-        contact_phone: contactPhone.trim() || null,
-        parent_name: parentName.trim() || null,
-        parent_email: parentEmail.trim() || null,
-        parent_phone: parentPhone.trim() || null,
+        contactEmail: contactEmail.trim() || null,
+        contactPhone: contactPhone.trim() || null,
+        parentName: parentName.trim() || null,
+        parentEmail: parentEmail.trim() || null,
+        parentPhone: parentPhone.trim() || null,
+        photoUrl: null,
+        createdAt: new Date().toISOString(),
       });
 
-      if (dbError) throw dbError;
+      // Create PlayerTeam entries for each selected team
+      for (const tId of selectedTeamIds) {
+        await playerTeamsService.create({
+          playerId,
+          teamId: tId,
+          assignedAt: new Date().toISOString(),
+        });
+      }
 
       handleClose();
       onSuccess?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Spieler konnte nicht hinzugefügt werden');
+      setError(err instanceof Error ? err.message : 'Spieler konnte nicht hinzugefuegt werden');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Spieler hinzufügen" size="xl">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Spieler hinzufuegen" size="xl">
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -132,17 +184,9 @@ export function AddPlayerModal({ isOpen, onClose, teamId, onSuccess }: AddPlayer
           <Input
             id="player-name"
             label="Name *"
-            placeholder="Max Mustermann"
+            placeholder="Max Hofer"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            required
-          />
-          <Select
-            id="player-team"
-            label="Team *"
-            options={teamOptions}
-            value={selectedTeamId}
-            onChange={(e) => setSelectedTeamId(e.target.value)}
             required
           />
           <Input
@@ -161,7 +205,7 @@ export function AddPlayerModal({ isOpen, onClose, teamId, onSuccess }: AddPlayer
           />
           <Select
             id="player-foot"
-            label="Bevorzugter Fuß"
+            label="Bevorzugter Fuss"
             options={FOOT_OPTIONS}
             value={preferredFoot}
             onChange={(e) => setPreferredFoot(e.target.value)}
@@ -178,7 +222,7 @@ export function AddPlayerModal({ isOpen, onClose, teamId, onSuccess }: AddPlayer
           />
           <Input
             id="player-height"
-            label="Größe (cm)"
+            label="Groesse (cm)"
             type="number"
             placeholder="z.B. 165"
             value={height}
@@ -192,6 +236,36 @@ export function AddPlayerModal({ isOpen, onClose, teamId, onSuccess }: AddPlayer
             value={weight}
             onChange={(e) => setWeight(e.target.value)}
           />
+        </div>
+
+        {/* Team Assignment (multi-select via checkboxes) */}
+        <div>
+          <h3 className="mb-3 text-sm font-semibold text-gray-700">Teams zuweisen *</h3>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {teams.map((t) => (
+              <label
+                key={t.id}
+                className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                  selectedTeamIds.includes(t.id)
+                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedTeamIds.includes(t.id)}
+                  onChange={() => toggleTeam(t.id)}
+                  className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="truncate">{t.name} ({t.category})</span>
+              </label>
+            ))}
+          </div>
+          {teams.length === 0 && (
+            <p className="mt-1 text-sm text-gray-400">
+              Erstelle zuerst ein Team, bevor du Spieler hinzufuegst.
+            </p>
+          )}
         </div>
 
         {/* Contact */}
@@ -210,7 +284,7 @@ export function AddPlayerModal({ isOpen, onClose, teamId, onSuccess }: AddPlayer
               id="player-phone"
               label="Telefon"
               type="tel"
-              placeholder="+49 170 ..."
+              placeholder="+43 660 ..."
               value={contactPhone}
               onChange={(e) => setContactPhone(e.target.value)}
             />
@@ -240,7 +314,7 @@ export function AddPlayerModal({ isOpen, onClose, teamId, onSuccess }: AddPlayer
               id="parent-phone"
               label="Telefon"
               type="tel"
-              placeholder="+49 170 ..."
+              placeholder="+43 660 ..."
               value={parentPhone}
               onChange={(e) => setParentPhone(e.target.value)}
             />
@@ -251,8 +325,8 @@ export function AddPlayerModal({ isOpen, onClose, teamId, onSuccess }: AddPlayer
           <Button type="button" variant="outline" onClick={handleClose}>
             Abbrechen
           </Button>
-          <Button type="submit" disabled={isSubmitting || !name.trim() || !selectedTeamId}>
-            {isSubmitting ? 'Wird hinzugefügt...' : 'Spieler hinzufügen'}
+          <Button type="submit" disabled={isSubmitting || !name.trim() || selectedTeamIds.length === 0}>
+            {isSubmitting ? 'Wird hinzugefuegt...' : 'Spieler hinzufuegen'}
           </Button>
         </div>
       </form>

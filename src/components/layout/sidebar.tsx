@@ -22,13 +22,13 @@ import { usePathname } from 'next/navigation';
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Teams', href: '/teams', icon: Users },
-  { name: 'Players', href: '/players', icon: UserCircle },
+  { name: 'Spieler', href: '/players', icon: UserCircle },
   { name: 'Trainings', href: '/trainings', icon: Dumbbell },
-  { name: 'Matches', href: '/matches', icon: Trophy },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-  { name: 'Calendar', href: '/calendar', icon: CalendarDays },
-  { name: 'Communication', href: '/communication', icon: MessageSquare },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Spiele', href: '/matches', icon: Trophy },
+  { name: 'Statistiken', href: '/analytics', icon: BarChart3 },
+  { name: 'Kalender', href: '/calendar', icon: CalendarDays },
+  { name: 'Kommunikation', href: '/communication', icon: MessageSquare },
+  { name: 'Einstellungen', href: '/settings', icon: Settings },
 ];
 
 export function Sidebar() {
@@ -92,7 +92,7 @@ export function Sidebar() {
         <div className="border-t border-gray-200 p-4">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-700">
-              {profile.full_name
+              {profile.fullName
                 .split(' ')
                 .map((n) => n[0])
                 .join('')
@@ -100,7 +100,7 @@ export function Sidebar() {
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-gray-900">
-                {profile.full_name}
+                {profile.fullName}
               </p>
               <p className="truncate text-xs text-gray-500 capitalize">{profile.role.replace('_', ' ')}</p>
             </div>
