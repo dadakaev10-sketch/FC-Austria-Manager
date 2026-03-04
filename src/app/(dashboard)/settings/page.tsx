@@ -1,110 +1,32 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
+import { useClubStore } from '@/stores/club-store';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import {
-  Settings,
   User,
   Building,
   Shield,
   Bell,
   Save,
   Camera,
+  Loader2,
+  CheckCircle,
 } from 'lucide-react';
-import type { UserRole } from '@/types/database';
+import { updateUserProfile, clubsService } from '@/lib/firebase/services';
+import { db } from '@/lib/firebase/config';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import type { UserRole, Profile } from '@/types/database';
 
 // ---------------------------------------------------------------------------
-// Mock-Daten
+// Static constants
 // ---------------------------------------------------------------------------
-
-const MOCK_PROFILE = {
-  fullName: 'Stefan Hofer',
-  email: 'stefan.hofer@fcclub.at',
-  phone: '+43 664 1234567',
-  avatarUrl: null as string | null,
-};
-
-const MOCK_CLUB = {
-  name: 'FC Austria Wien Jugend',
-  address: 'Fischhofgasse 12',
-  city: 'Wien',
-  country: 'Oesterreich',
-  website: 'https://fc-austria-jugend.at',
-};
-
-interface MockUser {
-  id: string;
-  fullName: string;
-  email: string;
-  role: UserRole;
-  avatarUrl: string | null;
-}
-
-const MOCK_USERS: MockUser[] = [
-  {
-    id: 'u1',
-    fullName: 'Stefan Hofer',
-    email: 'stefan.hofer@fcclub.at',
-    role: 'admin',
-    avatarUrl: null,
-  },
-  {
-    id: 'u2',
-    fullName: 'Anna Schneider',
-    email: 'anna.schneider@fcclub.at',
-    role: 'manager',
-    avatarUrl: null,
-  },
-  {
-    id: 'u3',
-    fullName: 'Thomas Mueller',
-    email: 'thomas.mueller@fcclub.at',
-    role: 'coach',
-    avatarUrl: null,
-  },
-  {
-    id: 'u4',
-    fullName: 'Lisa Weber',
-    email: 'lisa.weber@fcclub.at',
-    role: 'coach',
-    avatarUrl: null,
-  },
-  {
-    id: 'u5',
-    fullName: 'Marco Berger',
-    email: 'marco.berger@fcclub.at',
-    role: 'assistant_coach',
-    avatarUrl: null,
-  },
-  {
-    id: 'u6',
-    fullName: 'Sophie Fischer',
-    email: 'sophie.fischer@fcclub.at',
-    role: 'assistant_coach',
-    avatarUrl: null,
-  },
-  {
-    id: 'u7',
-    fullName: 'Jan Becker',
-    email: 'jan.becker@fcclub.at',
-    role: 'player',
-    avatarUrl: null,
-  },
-  {
-    id: 'u8',
-    fullName: 'Maria Hoffmann',
-    email: 'maria.hoffmann@fcclub.at',
-    role: 'parent',
-    avatarUrl: null,
-  },
-];
 
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Admin' },
@@ -161,35 +83,168 @@ function formatRoleLabel(role: string) {
 // Page
 // ---------------------------------------------------------------------------
 
+interface ClubUser {
+  id: string;
+  fullName: string;
+  email: string;
+  role: UserRole;
+  avatarUrl: string | null;
+}
+
 export default function SettingsPage() {
   const { profile, hasRole } = useAuthStore();
+  const { currentClub } = useClubStore();
 
   const isAdmin = hasRole(['admin']);
   const isAdminOrManager = hasRole(['admin', 'manager']);
 
   // Profil-Formular
-  const [profileName, setProfileName] = useState(MOCK_PROFILE.fullName);
-  const [profileEmail, setProfileEmail] = useState(MOCK_PROFILE.email);
-  const [profilePhone, setProfilePhone] = useState(MOCK_PROFILE.phone);
+  const [profileName, setProfileName] = useState('');
+  const [profileEmail, setProfileEmail] = useState('');
+  const [profilePhone, setProfilePhone] = useState('');
 
   // Vereins-Formular
-  const [clubName, setClubName] = useState(MOCK_CLUB.name);
-  const [clubAddress, setClubAddress] = useState(MOCK_CLUB.address);
-  const [clubCity, setClubCity] = useState(MOCK_CLUB.city);
-  const [clubCountry, setClubCountry] = useState(MOCK_CLUB.country);
-  const [clubWebsite, setClubWebsite] = useState(MOCK_CLUB.website);
+  const [clubName, setClubName] = useState('');
+  const [clubAddress, setClubAddress] = useState('');
+  const [clubCity, setClubCity] = useState('');
+  const [clubCountry, setClubCountry] = useState('');
+  const [clubWebsite, setClubWebsite] = useState('');
 
   // Rollenverwaltung
-  const [users, setUsers] = useState<MockUser[]>(MOCK_USERS);
+  const [users, setUsers] = useState<ClubUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(true);
+
+  // Saving state
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savedProfile, setSavedProfile] = useState(false);
+  const [savingClub, setSavingClub] = useState(false);
+  const [savedClub, setSavedClub] = useState(false);
+  const [savingRole, setSavingRole] = useState<string | null>(null);
 
   // Benachrichtigungseinstellungen
   const [notifyTraining, setNotifyTraining] = useState(true);
   const [notifyMatch, setNotifyMatch] = useState(true);
   const [notifyAnnouncements, setNotifyAnnouncements] = useState(true);
 
-  function handleRoleChange(userId: string, newRole: UserRole) {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
+  // Initialize profile form from real data
+  useEffect(() => {
+    if (profile) {
+      setProfileName(profile.fullName || '');
+      setProfileEmail(profile.email || '');
+      setProfilePhone(profile.phone || '');
+    }
+  }, [profile]);
+
+  // Initialize club form from real data
+  useEffect(() => {
+    if (currentClub) {
+      setClubName(currentClub.name || '');
+      setClubAddress(currentClub.address || '');
+      setClubCity(currentClub.city || '');
+      setClubCountry(currentClub.country || '');
+      setClubWebsite(currentClub.website || '');
+    }
+  }, [currentClub]);
+
+  // Subscribe to users collection for the current club
+  useEffect(() => {
+    if (!currentClub?.id) {
+      setUsers([]);
+      setUsersLoading(false);
+      return;
+    }
+
+    setUsersLoading(true);
+    const q = query(
+      collection(db, 'users'),
+      where('clubId', '==', currentClub.id)
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const clubUsers: ClubUser[] = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            fullName: data.fullName || '',
+            email: data.email || '',
+            role: data.role as UserRole,
+            avatarUrl: data.avatarUrl || null,
+          };
+        });
+        setUsers(clubUsers);
+        setUsersLoading(false);
+      },
+      (error) => {
+        console.error('[Settings] Error subscribing to users:', error.message);
+        setUsers([]);
+        setUsersLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [currentClub?.id]);
+
+  // Save profile handler
+  async function handleSaveProfile() {
+    if (!profile?.id) return;
+    setSavingProfile(true);
+    setSavedProfile(false);
+    try {
+      await updateUserProfile(profile.id, {
+        fullName: profileName,
+        phone: profilePhone || null,
+      });
+      setSavedProfile(true);
+      setTimeout(() => setSavedProfile(false), 3000);
+    } catch (error) {
+      console.error('[Settings] Error saving profile:', error);
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
+  // Save club handler
+  async function handleSaveClub() {
+    if (!currentClub?.id) return;
+    setSavingClub(true);
+    setSavedClub(false);
+    try {
+      await clubsService.update(currentClub.id, {
+        name: clubName,
+        address: clubAddress || null,
+        city: clubCity || null,
+        country: clubCountry || null,
+        website: clubWebsite || null,
+      } as Partial<typeof currentClub>);
+      setSavedClub(true);
+      setTimeout(() => setSavedClub(false), 3000);
+    } catch (error) {
+      console.error('[Settings] Error saving club:', error);
+    } finally {
+      setSavingClub(false);
+    }
+  }
+
+  // Role change handler
+  async function handleRoleChange(userId: string, newRole: UserRole) {
+    setSavingRole(userId);
+    try {
+      await updateUserProfile(userId, { role: newRole });
+    } catch (error) {
+      console.error('[Settings] Error updating role:', error);
+    } finally {
+      setSavingRole(null);
+    }
+  }
+
+  // Show loading state while profile hasn't loaded yet
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+      </div>
     );
   }
 
@@ -218,7 +273,7 @@ export default function SettingsPage() {
               <div className="relative">
                 <Avatar
                   name={profileName}
-                  src={MOCK_PROFILE.avatarUrl}
+                  src={profile.avatarUrl}
                   size="lg"
                 />
                 <button className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-emerald-600 text-white shadow-sm hover:bg-emerald-700">
@@ -248,6 +303,7 @@ export default function SettingsPage() {
                 label="E-Mail"
                 type="email"
                 value={profileEmail}
+                disabled
                 onChange={(e) => setProfileEmail(e.target.value)}
               />
               <Input
@@ -259,9 +315,19 @@ export default function SettingsPage() {
               />
             </div>
 
-            <div className="flex justify-end">
-              <Button>
-                <Save className="mr-2 h-4 w-4" />
+            <div className="flex items-center justify-end gap-3">
+              {savedProfile && (
+                <span className="flex items-center gap-1 text-sm text-emerald-600">
+                  <CheckCircle className="h-4 w-4" />
+                  Gespeichert
+                </span>
+              )}
+              <Button onClick={handleSaveProfile} disabled={savingProfile}>
+                {savingProfile ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="mr-2 h-4 w-4" />
+                )}
                 Profil speichern
               </Button>
             </div>
@@ -270,7 +336,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* Vereinseinstellungen (Admin/Manager) */}
-      {isAdminOrManager && (
+      {isAdminOrManager && currentClub && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -314,9 +380,19 @@ export default function SettingsPage() {
                 />
               </div>
 
-              <div className="flex justify-end">
-                <Button>
-                  <Save className="mr-2 h-4 w-4" />
+              <div className="flex items-center justify-end gap-3">
+                {savedClub && (
+                  <span className="flex items-center gap-1 text-sm text-emerald-600">
+                    <CheckCircle className="h-4 w-4" />
+                    Gespeichert
+                  </span>
+                )}
+                <Button onClick={handleSaveClub} disabled={savingClub}>
+                  {savingClub ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
                   Vereinseinstellungen speichern
                 </Button>
               </div>
@@ -339,102 +415,126 @@ export default function SettingsPage() {
               Verwalte Benutzerrollen und Berechtigungen im Verein.
             </p>
 
-            {/* Desktop-Tabelle */}
-            <div className="hidden overflow-hidden rounded-lg border border-gray-200 md:block">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Benutzer
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      E-Mail
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Aktuelle Rolle
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Rolle aendern
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 bg-white">
+            {usersLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
+              </div>
+            ) : users.length === 0 ? (
+              <p className="py-8 text-center text-sm text-gray-500">
+                Keine Benutzer gefunden.
+              </p>
+            ) : (
+              <>
+                {/* Desktop-Tabelle */}
+                <div className="hidden overflow-hidden rounded-lg border border-gray-200 md:block">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                          Benutzer
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                          E-Mail
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                          Aktuelle Rolle
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                          Rolle aendern
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                      {users.map((user) => (
+                        <tr key={user.id} className="hover:bg-gray-50">
+                          <td className="whitespace-nowrap px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <Avatar name={user.fullName} src={user.avatarUrl} size="sm" />
+                              <span className="text-sm font-medium text-gray-900">
+                                {user.fullName}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+                            {user.email}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3">
+                            <Badge variant={getRoleBadgeVariant(user.role)}>
+                              {formatRoleLabel(user.role)}
+                            </Badge>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <select
+                                value={user.role}
+                                onChange={(e) =>
+                                  handleRoleChange(user.id, e.target.value as UserRole)
+                                }
+                                disabled={savingRole === user.id}
+                                className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                              >
+                                {ROLE_OPTIONS.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                              {savingRole === user.id && (
+                                <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile-Karten */}
+                <div className="space-y-3 md:hidden">
                   {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <Avatar name={user.fullName} src={user.avatarUrl} size="sm" />
-                          <span className="text-sm font-medium text-gray-900">
+                    <div
+                      key={user.id}
+                      className="rounded-lg border border-gray-200 p-4 space-y-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar name={user.fullName} src={user.avatarUrl} size="sm" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
                             {user.fullName}
-                          </span>
+                          </p>
+                          <p className="text-xs text-gray-500">{user.email}</p>
                         </div>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
-                        {user.email}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3">
+                      </div>
+                      <div className="flex items-center justify-between">
                         <Badge variant={getRoleBadgeVariant(user.role)}>
                           {formatRoleLabel(user.role)}
                         </Badge>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <select
-                          value={user.role}
-                          onChange={(e) =>
-                            handleRoleChange(user.id, e.target.value as UserRole)
-                          }
-                          className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                        >
-                          {ROLE_OPTIONS.map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile-Karten */}
-            <div className="space-y-3 md:hidden">
-              {users.map((user) => (
-                <div
-                  key={user.id}
-                  className="rounded-lg border border-gray-200 p-4 space-y-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <Avatar name={user.fullName} src={user.avatarUrl} size="sm" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {user.fullName}
-                      </p>
-                      <p className="text-xs text-gray-500">{user.email}</p>
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={user.role}
+                            onChange={(e) =>
+                              handleRoleChange(user.id, e.target.value as UserRole)
+                            }
+                            disabled={savingRole === user.id}
+                            className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          >
+                            {ROLE_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                          {savingRole === user.id && (
+                            <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Badge variant={getRoleBadgeVariant(user.role)}>
-                      {formatRoleLabel(user.role)}
-                    </Badge>
-                    <select
-                      value={user.role}
-                      onChange={(e) =>
-                        handleRoleChange(user.id, e.target.value as UserRole)
-                      }
-                      className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    >
-                      {ROLE_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </CardContent>
         </Card>
       )}

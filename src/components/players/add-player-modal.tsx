@@ -149,7 +149,6 @@ export function AddPlayerModal({ isOpen, onClose, teamId, onSuccess }: AddPlayer
         parentEmail: parentEmail.trim() || null,
         parentPhone: parentPhone.trim() || null,
         photoUrl: null,
-        createdAt: new Date().toISOString(),
       });
 
       // Create PlayerTeam entries for each selected team

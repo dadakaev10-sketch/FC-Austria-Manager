@@ -38,7 +38,6 @@ export default function OnboardingPage() {
         country: country.trim() || null,
         foundedYear: null,
         website: null,
-        createdAt: new Date().toISOString(),
       });
 
       const club: Club = {

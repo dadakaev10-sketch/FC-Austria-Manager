@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   startOfMonth,
   endOfMonth,
@@ -13,9 +13,15 @@ import {
   isToday,
   startOfWeek,
   endOfWeek,
-  getDay,
 } from 'date-fns';
 import { de } from 'date-fns/locale';
+import { useClubStore } from '@/stores/club-store';
+import {
+  subscribeClubTrainings,
+  subscribeClubMatches,
+  subscribeClubCalendarEvents,
+} from '@/lib/firebase/services';
+import type { Training, Match, CalendarEvent } from '@/types/database';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,6 +35,7 @@ import {
   Calendar,
   MapPin,
   Clock,
+  Loader2,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -45,171 +52,6 @@ interface CalendarEventItem {
   eventType: 'training' | 'match' | 'event';
   teamName: string;
 }
-
-// ---------------------------------------------------------------------------
-// Mock-Daten -- 15 Termine ueber den aktuellen Monat verteilt
-// ---------------------------------------------------------------------------
-
-const now = new Date();
-const year = now.getFullYear();
-const month = now.getMonth(); // 0-indexed
-
-function makeDate(day: number): string {
-  return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-}
-
-const MOCK_EVENTS: CalendarEventItem[] = [
-  {
-    id: 'e1',
-    title: 'U15 Passspiel & Bewegung',
-    date: makeDate(2),
-    startTime: '16:00',
-    endTime: '17:30',
-    location: 'Trainingsplatz A',
-    eventType: 'training',
-    teamName: 'U15',
-  },
-  {
-    id: 'e2',
-    title: 'U17 vs FC Rapid Wien II',
-    date: makeDate(4),
-    startTime: '10:00',
-    endTime: '12:00',
-    location: 'Heimstadion',
-    eventType: 'match',
-    teamName: 'U17',
-  },
-  {
-    id: 'e3',
-    title: 'U12 Ballkontrolle Grundlagen',
-    date: makeDate(5),
-    startTime: '15:00',
-    endTime: '16:00',
-    location: 'Trainingsplatz B',
-    eventType: 'training',
-    teamName: 'U12',
-  },
-  {
-    id: 'e4',
-    title: 'Vereinsvorstandssitzung',
-    date: makeDate(6),
-    startTime: '19:00',
-    endTime: '21:00',
-    location: 'Vereinshaus',
-    eventType: 'event',
-    teamName: 'Vereinsweit',
-  },
-  {
-    id: 'e5',
-    title: 'U15 Taktische Positionierung',
-    date: makeDate(8),
-    startTime: '16:00',
-    endTime: '17:30',
-    location: 'Trainingsplatz A',
-    eventType: 'training',
-    teamName: 'U15',
-  },
-  {
-    id: 'e6',
-    title: 'Kampfmannschaft vs SV Mattersburg',
-    date: makeDate(10),
-    startTime: '15:30',
-    endTime: '17:30',
-    location: 'Heimstadion',
-    eventType: 'match',
-    teamName: 'Kampfmannschaft',
-  },
-  {
-    id: 'e7',
-    title: 'U19 Pressing & Konter',
-    date: makeDate(12),
-    startTime: '16:00',
-    endTime: '17:30',
-    location: 'Trainingsplatz B',
-    eventType: 'training',
-    teamName: 'U19',
-  },
-  {
-    id: 'e8',
-    title: 'Elterninformationsabend',
-    date: makeDate(13),
-    startTime: '18:00',
-    endTime: '20:00',
-    location: 'Vereinshaus',
-    eventType: 'event',
-    teamName: 'Vereinsweit',
-  },
-  {
-    id: 'e9',
-    title: 'U17 Defensivformation',
-    date: makeDate(15),
-    startTime: '17:30',
-    endTime: '19:00',
-    location: 'Trainingsplatz A',
-    eventType: 'training',
-    teamName: 'U17',
-  },
-  {
-    id: 'e10',
-    title: 'U15 vs SC Admira Jugend',
-    date: makeDate(17),
-    startTime: '10:00',
-    endTime: '12:00',
-    location: 'Admira Sportpark',
-    eventType: 'match',
-    teamName: 'U15',
-  },
-  {
-    id: 'e11',
-    title: 'Kampfmannschaft Fitness & Kondition',
-    date: makeDate(19),
-    startTime: '09:00',
-    endTime: '11:00',
-    location: 'Stadionplatz',
-    eventType: 'training',
-    teamName: 'Kampfmannschaft',
-  },
-  {
-    id: 'e12',
-    title: 'U12 vs SK Sturm Graz Jugend',
-    date: makeDate(21),
-    startTime: '09:00',
-    endTime: '11:00',
-    location: 'Sturm Arena',
-    eventType: 'match',
-    teamName: 'U12',
-  },
-  {
-    id: 'e13',
-    title: 'Benefiz-Gala',
-    date: makeDate(22),
-    startTime: '19:00',
-    endTime: '23:00',
-    location: 'Festsaal',
-    eventType: 'event',
-    teamName: 'Vereinsweit',
-  },
-  {
-    id: 'e14',
-    title: 'U19 Standards',
-    date: makeDate(25),
-    startTime: '16:00',
-    endTime: '17:30',
-    location: 'Trainingsplatz A',
-    eventType: 'training',
-    teamName: 'U19',
-  },
-  {
-    id: 'e15',
-    title: 'Kampfmannschaft vs FC Rapid Wien II',
-    date: makeDate(28),
-    startTime: '15:30',
-    endTime: '17:30',
-    location: 'Heimstadion',
-    eventType: 'match',
-    teamName: 'Kampfmannschaft',
-  },
-];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -277,9 +119,112 @@ const WEEKDAY_LABELS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 // ---------------------------------------------------------------------------
 
 export default function CalendarPage() {
+  const { currentClub, teams } = useClubStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [view, setView] = useState<'month' | 'week'>('month');
+
+  // Firestore state
+  const [trainings, setTrainings] = useState<Training[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Subscribe to Firestore collections
+  useEffect(() => {
+    if (!currentClub?.id) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    let trainingsLoaded = false;
+    let matchesLoaded = false;
+    let calendarEventsLoaded = false;
+
+    function checkAllLoaded() {
+      if (trainingsLoaded && matchesLoaded && calendarEventsLoaded) {
+        setIsLoading(false);
+      }
+    }
+
+    const unsubTrainings = subscribeClubTrainings(currentClub.id, (data) => {
+      setTrainings(data);
+      trainingsLoaded = true;
+      checkAllLoaded();
+    });
+
+    const unsubMatches = subscribeClubMatches(currentClub.id, (data) => {
+      setMatches(data);
+      matchesLoaded = true;
+      checkAllLoaded();
+    });
+
+    const unsubCalendarEvents = subscribeClubCalendarEvents(currentClub.id, (data) => {
+      setCalendarEvents(data);
+      calendarEventsLoaded = true;
+      checkAllLoaded();
+    });
+
+    return () => {
+      unsubTrainings();
+      unsubMatches();
+      unsubCalendarEvents();
+    };
+  }, [currentClub?.id]);
+
+  // Merge all data sources into unified CalendarEventItem[]
+  const mergedEvents = useMemo<CalendarEventItem[]>(() => {
+    const items: CalendarEventItem[] = [];
+
+    // Trainings
+    trainings.forEach((t) => {
+      const teamName = teams.find((tm) => tm.id === t.teamId)?.name || t.teamId;
+      items.push({
+        id: t.id,
+        title: teamName + ' ' + t.focus,
+        date: t.date,
+        startTime: t.startTime,
+        endTime: t.endTime,
+        location: t.location,
+        eventType: 'training',
+        teamName,
+      });
+    });
+
+    // Matches
+    matches.forEach((m) => {
+      const teamName = teams.find((tm) => tm.id === m.teamId)?.name || m.teamId;
+      items.push({
+        id: m.id,
+        title: teamName + ' vs ' + m.opponent,
+        date: m.date,
+        startTime: m.time,
+        endTime: null,
+        location: m.location,
+        eventType: 'match',
+        teamName,
+      });
+    });
+
+    // Calendar events
+    calendarEvents.forEach((ce) => {
+      items.push({
+        id: ce.id,
+        title: ce.title,
+        date: ce.date,
+        startTime: ce.startTime,
+        endTime: ce.endTime,
+        location: ce.location,
+        eventType: ce.eventType,
+        teamName: ce.teamId
+          ? teams.find((tm) => tm.id === ce.teamId)?.name || 'Vereinsweit'
+          : 'Vereinsweit',
+      });
+    });
+
+    return items;
+  }, [trainings, matches, calendarEvents, teams]);
 
   // ---- Kalenderraster-Tage erstellen ----
   const calendarDays = useMemo(() => {
@@ -302,12 +247,12 @@ export default function CalendarPage() {
   // ---- Termine nach Datum gruppieren ----
   const eventsByDate = useMemo(() => {
     const map: Record<string, CalendarEventItem[]> = {};
-    MOCK_EVENTS.forEach((event) => {
+    mergedEvents.forEach((event) => {
       if (!map[event.date]) map[event.date] = [];
       map[event.date].push(event);
     });
     return map;
-  }, []);
+  }, [mergedEvents]);
 
   // ---- Termine fuer ausgewaehlten Tag ----
   const selectedDayEvents = useMemo(() => {
@@ -344,6 +289,15 @@ export default function CalendarPage() {
   function goToToday() {
     setCurrentDate(new Date());
     setSelectedDate(new Date());
+  }
+
+  // ---- Loading state ----
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+      </div>
+    );
   }
 
   return (

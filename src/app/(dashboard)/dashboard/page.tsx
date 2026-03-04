@@ -1,6 +1,14 @@
 'use client';
 
+import { useState, useEffect, useMemo } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
+import { useClubStore } from '@/stores/club-store';
+import {
+  subscribeClubMatches,
+  subscribeClubTrainings,
+  subscribeClubAnnouncements,
+} from '@/lib/firebase/services';
+import type { Match, Training, Announcement } from '@/types/database';
 import { StatCard } from '@/components/ui/stat-card';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,99 +21,9 @@ import {
   MapPin,
   Clock,
   Megaphone,
+  Loader2,
 } from 'lucide-react';
 import { formatDate, formatTime } from '@/lib/utils';
-
-// ---------------------------------------------------------------------------
-// Mock / Platzhalterdaten
-// Diese werden spaeter durch echte Firebase/Firestore-Abfragen ersetzt.
-// ---------------------------------------------------------------------------
-
-// TODO: Spieleranzahl aus Firestore abrufen
-const MOCK_TOTAL_PLAYERS = 42;
-
-// TODO: Kommende Trainings aus Firestore abrufen
-const MOCK_UPCOMING_TRAININGS = 8;
-
-// TODO: Kommende Spiele aus Firestore abrufen
-const MOCK_UPCOMING_MATCHES = 3;
-
-// TODO: Anwesenheitsrate aus Firestore berechnen
-const MOCK_ATTENDANCE_RATE = 87;
-
-// TODO: Naechstes Training aus Firestore abrufen
-const MOCK_NEXT_TRAINING = {
-  id: '1',
-  date: '2026-03-04',
-  startTime: '17:00',
-  endTime: '18:30',
-  location: 'Trainingsplatz A',
-  focus: 'Taktische Positionierung & Pressing',
-  team: { name: 'U15' },
-};
-
-// TODO: Kommende Spiele aus Firestore abrufen
-const MOCK_UPCOMING_MATCHES_LIST = [
-  {
-    id: '1',
-    date: '2026-03-07',
-    time: '15:00',
-    opponent: 'FC Rapid Wien II',
-    homeOrAway: 'home' as const,
-    competition: 'Wiener Liga',
-    team: { name: 'U15' },
-  },
-  {
-    id: '2',
-    date: '2026-03-14',
-    time: '10:30',
-    opponent: 'SC Admira Jugend',
-    homeOrAway: 'away' as const,
-    competition: 'OeFB Jugendcup',
-    team: { name: 'U17' },
-  },
-  {
-    id: '3',
-    date: '2026-03-21',
-    time: '14:00',
-    opponent: 'SK Sturm Graz Jugend',
-    homeOrAway: 'home' as const,
-    competition: 'Wiener Liga',
-    team: { name: 'U15' },
-  },
-];
-
-// TODO: Ankuendigungen aus Firestore abrufen
-const MOCK_ANNOUNCEMENTS = [
-  {
-    id: '1',
-    title: 'Trainingsplan fuer Maerz aktualisiert',
-    announcementType: 'general' as const,
-    createdAt: '2026-03-03T10:00:00Z',
-    author: { fullName: 'Trainer Hofer' },
-  },
-  {
-    id: '2',
-    title: 'Spieltag-Trikots koennen abgeholt werden',
-    announcementType: 'general' as const,
-    createdAt: '2026-03-02T14:30:00Z',
-    author: { fullName: 'Vereinsleitung' },
-  },
-  {
-    id: '3',
-    title: 'Erinnerung: U15 Training morgen um 17 Uhr',
-    announcementType: 'training_reminder' as const,
-    createdAt: '2026-03-01T09:00:00Z',
-    author: { fullName: 'Trainer Hofer' },
-  },
-  {
-    id: '4',
-    title: 'Samstag Spiel gegen FC Rapid - bitte Verfuegbarkeit bestaetigen',
-    announcementType: 'match_reminder' as const,
-    createdAt: '2026-02-28T16:00:00Z',
-    author: { fullName: 'Trainer Hofer' },
-  },
-];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -145,8 +63,105 @@ function formatAnnouncementType(type: string) {
 
 export default function DashboardPage() {
   const { profile } = useAuthStore();
+  const { currentClub, players, teams } = useClubStore();
 
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [trainings, setTrainings] = useState<Training[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // ---------------------------------------------------------------------------
+  // Firestore subscriptions
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (!currentClub?.id) {
+      setIsLoading(false);
+      return;
+    }
+
+    let loaded = 0;
+    const checkDone = () => {
+      loaded++;
+      if (loaded >= 3) setIsLoading(false);
+    };
+
+    const unsub1 = subscribeClubMatches(currentClub.id, (data) => {
+      setMatches(data);
+      checkDone();
+    });
+    const unsub2 = subscribeClubTrainings(currentClub.id, (data) => {
+      setTrainings(data);
+      checkDone();
+    });
+    const unsub3 = subscribeClubAnnouncements(currentClub.id, (data) => {
+      setAnnouncements(data);
+      checkDone();
+    });
+
+    return () => {
+      unsub1();
+      unsub2();
+      unsub3();
+    };
+  }, [currentClub?.id]);
+
+  // ---------------------------------------------------------------------------
+  // Computed values
+  // ---------------------------------------------------------------------------
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
+  const totalPlayers = players.length;
+
+  const upcomingTrainings = useMemo(
+    () => trainings.filter((t) => new Date(t.date) >= today).length,
+    [trainings, today]
+  );
+
+  const upcomingMatchesCount = useMemo(
+    () => matches.filter((m) => new Date(m.date) >= today).length,
+    [matches, today]
+  );
+
+  const nextTraining = useMemo(() => {
+    const future = trainings
+      .filter((t) => new Date(t.date) >= today)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    return future[0] ?? null;
+  }, [trainings, today]);
+
+  const nextTrainingTeamName = useMemo(() => {
+    if (!nextTraining) return '';
+    return teams.find((t) => t.id === nextTraining.teamId)?.name ?? '';
+  }, [nextTraining, teams]);
+
+  const upcomingMatchesList = useMemo(() => {
+    return matches
+      .filter((m) => m.scoreHome === null)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(0, 5);
+  }, [matches]);
+
+  const recentAnnouncements = useMemo(
+    () => announcements.slice(0, 5),
+    [announcements]
+  );
+
+  // ---------------------------------------------------------------------------
+  // Loading state
+  // ---------------------------------------------------------------------------
   const firstName = profile?.fullName?.split(' ')[0] ?? 'Trainer';
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -162,33 +177,33 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Spieler gesamt"
-          value={MOCK_TOTAL_PLAYERS}
-          change="+3 diesen Monat"
-          changeType="positive"
+          value={totalPlayers}
+          change=""
+          changeType="neutral"
           icon={Users}
           iconColor="text-blue-600 bg-blue-100"
         />
         <StatCard
           title="Kommende Trainings"
-          value={MOCK_UPCOMING_TRAININGS}
-          change="Naechste 7 Tage"
+          value={upcomingTrainings}
+          change=""
           changeType="neutral"
           icon={Dumbbell}
           iconColor="text-emerald-600 bg-emerald-100"
         />
         <StatCard
           title="Kommende Spiele"
-          value={MOCK_UPCOMING_MATCHES}
-          change="Naechste 30 Tage"
+          value={upcomingMatchesCount}
+          change=""
           changeType="neutral"
           icon={Trophy}
           iconColor="text-amber-600 bg-amber-100"
         />
         <StatCard
           title="Anwesenheitsrate"
-          value={`${MOCK_ATTENDANCE_RATE}%`}
-          change="+2% vs. letzten Monat"
-          changeType="positive"
+          value={'\u2014'}
+          change=""
+          changeType="neutral"
           icon={TrendingUp}
           iconColor="text-purple-600 bg-purple-100"
         />
@@ -196,42 +211,44 @@ export default function DashboardPage() {
 
       {/* Zwei-Spalten-Layout: Training + Spiele */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Heutiges Training */}
+        {/* Naechstes Training */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Dumbbell className="h-5 w-5 text-emerald-600" />
-              Heutiges Training
+              Naechstes Training
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {MOCK_NEXT_TRAINING ? (
+            {nextTraining ? (
               <div className="space-y-4">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="font-semibold text-gray-900">
-                      {MOCK_NEXT_TRAINING.focus}
+                      {nextTraining.focus}
                     </p>
-                    <Badge variant="info" className="mt-1">
-                      {MOCK_NEXT_TRAINING.team.name}
-                    </Badge>
+                    {nextTrainingTeamName && (
+                      <Badge variant="info" className="mt-1">
+                        {nextTrainingTeamName}
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-2 text-sm text-gray-600">
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-gray-400" />
                     <span>
-                      {formatTime(MOCK_NEXT_TRAINING.startTime)} &ndash;{' '}
-                      {formatTime(MOCK_NEXT_TRAINING.endTime)}
+                      {formatTime(nextTraining.startTime)} &ndash;{' '}
+                      {formatTime(nextTraining.endTime)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-gray-400" />
-                    <span>{MOCK_NEXT_TRAINING.location}</span>
+                    <span>{nextTraining.location}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-gray-400" />
-                    <span>{formatDate(MOCK_NEXT_TRAINING.date)}</span>
+                    <span>{formatDate(nextTraining.date)}</span>
                   </div>
                 </div>
               </div>
@@ -239,7 +256,7 @@ export default function DashboardPage() {
               <div className="py-8 text-center">
                 <Dumbbell className="mx-auto h-10 w-10 text-gray-300" />
                 <p className="mt-2 text-sm text-gray-500">
-                  Keine Trainingseinheiten fuer heute geplant.
+                  Keine kommenden Trainingseinheiten geplant.
                 </p>
               </div>
             )}
@@ -255,35 +272,41 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {MOCK_UPCOMING_MATCHES_LIST.length > 0 ? (
+            {upcomingMatchesList.length > 0 ? (
               <div className="divide-y divide-gray-100">
-                {MOCK_UPCOMING_MATCHES_LIST.map((match) => (
-                  <div
-                    key={match.id}
-                    className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-gray-900">
-                        vs {match.opponent}
-                      </p>
-                      <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-500">
-                        <span>{formatDate(match.date)}</span>
-                        <span>&middot;</span>
-                        <span>{formatTime(match.time)}</span>
+                {upcomingMatchesList.map((match) => {
+                  const matchTeamName =
+                    teams.find((t) => t.id === match.teamId)?.name ?? '';
+                  return (
+                    <div
+                      key={match.id}
+                      className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-gray-900">
+                          vs {match.opponent}
+                        </p>
+                        <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-500">
+                          <span>{formatDate(match.date)}</span>
+                          <span>&middot;</span>
+                          <span>{formatTime(match.time)}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {matchTeamName && (
+                          <Badge variant="info">{matchTeamName}</Badge>
+                        )}
+                        <Badge
+                          variant={
+                            match.homeOrAway === 'home' ? 'success' : 'warning'
+                          }
+                        >
+                          {match.homeOrAway === 'home' ? 'Heim' : 'Auswaerts'}
+                        </Badge>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="info">{match.team.name}</Badge>
-                      <Badge
-                        variant={
-                          match.homeOrAway === 'home' ? 'success' : 'warning'
-                        }
-                      >
-                        {match.homeOrAway === 'home' ? 'Heim' : 'Auswaerts'}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="py-8 text-center">
@@ -306,9 +329,9 @@ export default function DashboardPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {MOCK_ANNOUNCEMENTS.length > 0 ? (
+          {recentAnnouncements.length > 0 ? (
             <div className="divide-y divide-gray-100">
-              {MOCK_ANNOUNCEMENTS.map((announcement) => (
+              {recentAnnouncements.map((announcement) => (
                 <div
                   key={announcement.id}
                   className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0"
@@ -318,16 +341,13 @@ export default function DashboardPage() {
                       {announcement.title}
                     </p>
                     <p className="mt-0.5 text-xs text-gray-500">
-                      {announcement.author.fullName} &middot;{' '}
                       {formatDate(announcement.createdAt)}
                     </p>
                   </div>
                   <Badge
-                    variant={getAnnouncementBadgeVariant(
-                      announcement.announcementType
-                    )}
+                    variant={getAnnouncementBadgeVariant(announcement.type)}
                   >
-                    {formatAnnouncementType(announcement.announcementType)}
+                    {formatAnnouncementType(announcement.type)}
                   </Badge>
                 </div>
               ))}

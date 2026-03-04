@@ -1,7 +1,15 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
+import { useClubStore } from '@/stores/club-store';
+import {
+  subscribeClubAnnouncements,
+  subscribeClubTrainings,
+  subscribeClubMatches,
+  announcementsService,
+} from '@/lib/firebase/services';
+import type { Announcement, Training, Match, AnnouncementType } from '@/types/database';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,152 +28,8 @@ import {
   Trophy,
   Clock,
   MapPin,
+  Loader2,
 } from 'lucide-react';
-
-// ---------------------------------------------------------------------------
-// Typen
-// ---------------------------------------------------------------------------
-
-interface MockAnnouncement {
-  id: string;
-  title: string;
-  content: string;
-  announcementType: 'general' | 'training_reminder' | 'match_reminder' | 'parent_message';
-  isPinned: boolean;
-  authorName: string;
-  teamName: string | null;
-  createdAt: string;
-}
-
-interface MockReminder {
-  id: string;
-  title: string;
-  type: 'training' | 'match';
-  date: string;
-  time: string;
-  location: string;
-  teamName: string;
-}
-
-// ---------------------------------------------------------------------------
-// Mock-Daten
-// ---------------------------------------------------------------------------
-
-const MOCK_ANNOUNCEMENTS: MockAnnouncement[] = [
-  {
-    id: 'a1',
-    title: 'Trainingsplan fuer Maerz aktualisiert',
-    content:
-      'Der Trainingsplan fuer Maerz ist finalisiert. Bitte pruefe den Kalender fuer deine mannschaftsspezifischen Einheiten. Die U15-Einheiten wurden auf Trainingsplatz A verschoben.',
-    announcementType: 'general',
-    isPinned: true,
-    authorName: 'Trainer Hofer',
-    teamName: null,
-    createdAt: '2026-03-03T10:00:00Z',
-  },
-  {
-    id: 'a2',
-    title: 'Spieltag-Trikots koennen abgeholt werden',
-    content:
-      'Die neuen Spieltag-Trikots fuer alle Jugendmannschaften sind jetzt im Vereinsbuero abholbereit. Bitte vor Samstag abholen. Jeder Spieler erhaelt ein Heim- und Auswaertstrikot.',
-    announcementType: 'general',
-    isPinned: true,
-    authorName: 'Vereinsleitung',
-    teamName: null,
-    createdAt: '2026-03-02T14:30:00Z',
-  },
-  {
-    id: 'a3',
-    title: 'U15 Trainingserinnerung',
-    content:
-      'Erinnerung: U15 hat morgen Training um 16:00 auf Trainingsplatz A. Bitte 15 Minuten frueher zum Aufwaermen erscheinen. Schienbeinschoner und Wasser mitbringen.',
-    announcementType: 'training_reminder',
-    isPinned: false,
-    authorName: 'Trainer Hofer',
-    teamName: 'U15',
-    createdAt: '2026-03-01T09:00:00Z',
-  },
-  {
-    id: 'a4',
-    title: 'Samstag Spiel gegen FC Rapid - Verfuegbarkeit bestaetigen',
-    content:
-      'Bitte bestaetigt eure Verfuegbarkeit fuer das U17-Spiel gegen FC Rapid Wien II am Samstag um 10:00. Antwortet auf diese Ankuendigung oder kontaktiert Trainer Hofer bis Donnerstag.',
-    announcementType: 'match_reminder',
-    isPinned: false,
-    authorName: 'Trainer Hofer',
-    teamName: 'U17',
-    createdAt: '2026-02-28T16:00:00Z',
-  },
-  {
-    id: 'a5',
-    title: 'Eltern-Freiwillige gesucht',
-    content:
-      'Wir suchen Eltern-Freiwillige fuer die Organisation der kommenden Benefiz-Gala am 22. Maerz. Bei Interesse bitte das Vereinsbuero kontaktieren.',
-    announcementType: 'parent_message',
-    isPinned: false,
-    authorName: 'Vereinsleitung',
-    teamName: null,
-    createdAt: '2026-02-27T11:00:00Z',
-  },
-  {
-    id: 'a6',
-    title: 'Anmeldung zum Fruehjahrsturnier geoeffnet',
-    content:
-      'Die Anmeldung fuer das Fruehjahrsturnier ist jetzt geoeffnet. Alle Mannschaften von U10 bis U19 koennen teilnehmen. Anmeldeschluss ist der 31. Maerz. Kontaktiert euren Trainer fuer Details.',
-    announcementType: 'general',
-    isPinned: false,
-    authorName: 'Vereinsleitung',
-    teamName: null,
-    createdAt: '2026-02-25T08:30:00Z',
-  },
-];
-
-const today = new Date();
-const toISODate = (d: Date) => d.toISOString().split('T')[0];
-const addDays = (d: Date, n: number) => {
-  const result = new Date(d);
-  result.setDate(result.getDate() + n);
-  return result;
-};
-
-const MOCK_REMINDERS: MockReminder[] = [
-  {
-    id: 'r1',
-    title: 'U15 Passspiel & Bewegung',
-    type: 'training',
-    date: toISODate(addDays(today, 1)),
-    time: '16:00',
-    location: 'Trainingsplatz A',
-    teamName: 'U15',
-  },
-  {
-    id: 'r2',
-    title: 'U17 vs FC Rapid Wien II',
-    type: 'match',
-    date: toISODate(addDays(today, 3)),
-    time: '10:00',
-    location: 'Heimstadion',
-    teamName: 'U17',
-  },
-  {
-    id: 'r3',
-    title: 'U19 Pressing & Konter',
-    type: 'training',
-    date: toISODate(addDays(today, 4)),
-    time: '16:00',
-    location: 'Trainingsplatz B',
-    teamName: 'U19',
-  },
-  {
-    id: 'r4',
-    title: 'Kampfmannschaft vs SV Mattersburg',
-    type: 'match',
-    date: toISODate(addDays(today, 7)),
-    time: '15:30',
-    location: 'Heimstadion',
-    teamName: 'Kampfmannschaft',
-  },
-];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -210,21 +74,13 @@ const TYPE_OPTIONS = [
   { value: 'parent_message', label: 'Elternnachricht' },
 ];
 
-const TEAM_OPTIONS = [
-  { value: '', label: 'Vereinsweit (alle Teams)' },
-  { value: 'U12', label: 'U12' },
-  { value: 'U15', label: 'U15' },
-  { value: 'U17', label: 'U17' },
-  { value: 'U19', label: 'U19' },
-  { value: 'Kampfmannschaft', label: 'Kampfmannschaft' },
-];
-
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
 export default function CommunicationPage() {
-  const { isCoachOrAbove } = useAuthStore();
+  const { profile, isCoachOrAbove } = useAuthStore();
+  const { currentClub, teams } = useClubStore();
   const [activeTab, setActiveTab] = useState<'announcements' | 'reminders'>('announcements');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -235,19 +91,143 @@ export default function CommunicationPage() {
   const [formTeam, setFormTeam] = useState('');
   const [formPinned, setFormPinned] = useState(false);
 
+  // Firestore state
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [trainings, setTrainings] = useState<Training[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const canCreate = isCoachOrAbove();
+
+  // Dynamic team options from store
+  const TEAM_OPTIONS = useMemo(() => {
+    const options = [{ value: '', label: 'Vereinsweit (alle Teams)' }];
+    teams.forEach((t) => {
+      options.push({ value: t.id, label: t.name });
+    });
+    return options;
+  }, [teams]);
+
+  // Subscribe to Firestore collections
+  useEffect(() => {
+    if (!currentClub?.id) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    let announcementsLoaded = false;
+    let trainingsLoaded = false;
+    let matchesLoaded = false;
+
+    function checkAllLoaded() {
+      if (announcementsLoaded && trainingsLoaded && matchesLoaded) {
+        setIsLoading(false);
+      }
+    }
+
+    const unsubAnnouncements = subscribeClubAnnouncements(currentClub.id, (data) => {
+      setAnnouncements(data);
+      announcementsLoaded = true;
+      checkAllLoaded();
+    });
+
+    const unsubTrainings = subscribeClubTrainings(currentClub.id, (data) => {
+      setTrainings(data);
+      trainingsLoaded = true;
+      checkAllLoaded();
+    });
+
+    const unsubMatches = subscribeClubMatches(currentClub.id, (data) => {
+      setMatches(data);
+      matchesLoaded = true;
+      checkAllLoaded();
+    });
+
+    return () => {
+      unsubAnnouncements();
+      unsubTrainings();
+      unsubMatches();
+    };
+  }, [currentClub?.id]);
 
   // Ankuendigungen sortieren: angepinnt zuerst, dann nach Datum
   const sortedAnnouncements = useMemo(() => {
-    return [...MOCK_ANNOUNCEMENTS].sort((a, b) => {
+    return [...announcements].sort((a, b) => {
       if (a.isPinned && !b.isPinned) return -1;
       if (!a.isPinned && b.isPinned) return 1;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, []);
+  }, [announcements]);
 
-  function handleSubmit() {
-    // In Produktion wuerden die Daten an Firestore gesendet
+  // Erinnerungen aus kommenden Trainings + Spielen ableiten
+  const reminders = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const items: {
+      id: string;
+      title: string;
+      type: 'training' | 'match';
+      date: string;
+      time: string;
+      location: string;
+      teamName: string;
+    }[] = [];
+
+    trainings.forEach((t) => {
+      if (t.date >= todayStr) {
+        const teamName = teams.find((tm) => tm.id === t.teamId)?.name || t.teamId;
+        items.push({
+          id: t.id,
+          title: teamName + ' ' + t.focus,
+          type: 'training',
+          date: t.date,
+          time: t.startTime,
+          location: t.location,
+          teamName,
+        });
+      }
+    });
+
+    matches.forEach((m) => {
+      if (m.date >= todayStr) {
+        const teamName = teams.find((tm) => tm.id === m.teamId)?.name || m.teamId;
+        items.push({
+          id: m.id,
+          title: teamName + ' vs ' + m.opponent,
+          type: 'match',
+          date: m.date,
+          time: m.time,
+          location: m.location || '',
+          teamName,
+        });
+      }
+    });
+
+    items.sort((a, b) => {
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      return a.time.localeCompare(b.time);
+    });
+
+    return items.slice(0, 10);
+  }, [trainings, matches, teams]);
+
+  async function handleSubmit() {
+    if (!currentClub?.id || !profile?.id) return;
+
+    try {
+      await announcementsService.create({
+        clubId: currentClub.id,
+        teamId: formTeam || null,
+        authorId: profile.id,
+        title: formTitle.trim(),
+        content: formContent.trim(),
+        type: formType as AnnouncementType,
+        isPinned: formPinned,
+      });
+    } catch (error) {
+      console.error('Fehler beim Erstellen der Ankuendigung:', error);
+    }
+
     setIsModalOpen(false);
     setFormTitle('');
     setFormContent('');
@@ -258,6 +238,15 @@ export default function CommunicationPage() {
 
   function openModal() {
     setIsModalOpen(true);
+  }
+
+  // ---- Loading state ----
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+      </div>
+    );
   }
 
   return (
@@ -309,55 +298,63 @@ export default function CommunicationPage() {
       {/* Ankuendigungen-Tab */}
       {activeTab === 'announcements' && (
         <div className="space-y-4">
-          {sortedAnnouncements.map((announcement) => (
-            <Card key={announcement.id} className="transition-shadow hover:shadow-md">
-              <CardContent className="py-5">
-                <div className="space-y-3">
-                  {/* Kopfzeile */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-base font-semibold text-gray-900">
-                          {announcement.title}
-                        </h3>
-                        {announcement.isPinned && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                            <Pin className="h-3 w-3" />
-                            Angepinnt
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
-                        <span>{announcement.authorName}</span>
-                        <span>&middot;</span>
-                        <span>{formatDate(announcement.createdAt)}</span>
-                        {announcement.teamName && (
-                          <>
-                            <span>&middot;</span>
-                            <span className="font-medium text-emerald-600">
-                              {announcement.teamName}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <Badge
-                      variant={getAnnouncementBadgeVariant(
-                        announcement.announcementType
-                      )}
-                    >
-                      {formatAnnouncementType(announcement.announcementType)}
-                    </Badge>
-                  </div>
+          {sortedAnnouncements.map((announcement) => {
+            const teamName = announcement.teamId
+              ? teams.find((t) => t.id === announcement.teamId)?.name || null
+              : null;
+            const authorName =
+              profile && announcement.authorId === profile.id
+                ? 'Du'
+                : announcement.authorId;
 
-                  {/* Inhaltsvorschau */}
-                  <p className="text-sm leading-relaxed text-gray-600">
-                    {announcement.content}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+            return (
+              <Card key={announcement.id} className="transition-shadow hover:shadow-md">
+                <CardContent className="py-5">
+                  <div className="space-y-3">
+                    {/* Kopfzeile */}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-base font-semibold text-gray-900">
+                            {announcement.title}
+                          </h3>
+                          {announcement.isPinned && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                              <Pin className="h-3 w-3" />
+                              Angepinnt
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+                          <span>{authorName}</span>
+                          <span>&middot;</span>
+                          <span>{formatDate(announcement.createdAt)}</span>
+                          {teamName && (
+                            <>
+                              <span>&middot;</span>
+                              <span className="font-medium text-emerald-600">
+                                {teamName}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <Badge
+                        variant={getAnnouncementBadgeVariant(announcement.type)}
+                      >
+                        {formatAnnouncementType(announcement.type)}
+                      </Badge>
+                    </div>
+
+                    {/* Inhaltsvorschau */}
+                    <p className="text-sm leading-relaxed text-gray-600">
+                      {announcement.content}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
 
           {sortedAnnouncements.length === 0 && (
             <Card>
@@ -383,7 +380,7 @@ export default function CommunicationPage() {
           <p className="text-sm text-gray-500">
             Kommende Trainings und Spiele automatisch aus dem Zeitplan generiert.
           </p>
-          {MOCK_REMINDERS.map((reminder) => {
+          {reminders.map((reminder) => {
             const isMatch = reminder.type === 'match';
             return (
               <Card key={reminder.id} className="transition-shadow hover:shadow-md">
@@ -420,10 +417,12 @@ export default function CommunicationPage() {
                           <Clock className="h-3.5 w-3.5" />
                           {formatDate(reminder.date)} &middot; {reminder.time}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3.5 w-3.5" />
-                          {reminder.location}
-                        </span>
+                        {reminder.location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3.5 w-3.5" />
+                            {reminder.location}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -432,7 +431,7 @@ export default function CommunicationPage() {
             );
           })}
 
-          {MOCK_REMINDERS.length === 0 && (
+          {reminders.length === 0 && (
             <Card>
               <CardContent>
                 <div className="flex flex-col items-center justify-center py-12 text-center">

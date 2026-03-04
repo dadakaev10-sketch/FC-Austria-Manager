@@ -92,7 +92,6 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTeamModalP
         season,
         coachId: null,
         assistantCoachId: null,
-        createdAt: new Date().toISOString(),
       });
 
       handleClose();

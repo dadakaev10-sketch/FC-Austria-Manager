@@ -17,7 +17,7 @@ interface CreateTrainingModalProps {
 }
 
 export function CreateTrainingModal({ isOpen, onClose, teamId, onSuccess }: CreateTrainingModalProps) {
-  const { teams } = useClubStore();
+  const { teams, currentClub } = useClubStore();
   const { profile } = useAuthStore();
 
   const [selectedTeamId, setSelectedTeamId] = useState(teamId || '');
@@ -60,6 +60,7 @@ export function CreateTrainingModal({ isOpen, onClose, teamId, onSuccess }: Crea
 
     try {
       await trainingsService.create({
+        clubId: currentClub?.id || '',
         teamId: selectedTeamId,
         date,
         startTime,
@@ -68,7 +69,6 @@ export function CreateTrainingModal({ isOpen, onClose, teamId, onSuccess }: Crea
         focus: focus.trim() || '',
         notes: notes.trim() || null,
         createdBy: profile?.id || '',
-        createdAt: new Date().toISOString(),
       });
 
       handleClose();

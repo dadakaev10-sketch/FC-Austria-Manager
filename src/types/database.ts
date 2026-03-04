@@ -128,6 +128,7 @@ export interface PlayerStats {
 
 export interface Training {
   id: string;
+  clubId: string;
   teamId: string;
   date: string;
   startTime: string;
@@ -158,6 +159,7 @@ export interface TrainingAttendance {
 
 export interface Match {
   id: string;
+  clubId: string;
   teamId: string;
   opponent: string;
   competition: string | null;

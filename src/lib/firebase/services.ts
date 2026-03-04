@@ -71,10 +71,18 @@ function createService<T extends { id: string }>(
         ...constraints,
         orderBy(defaultOrderField, defaultOrderDir)
       );
-      return onSnapshot(q, (snapshot) => {
-        const items = snapshot.docs.map((d) => normalizeDoc<T>(d.data(), d.id));
-        callback(items);
-      });
+      return onSnapshot(
+        q,
+        (snapshot) => {
+          const items = snapshot.docs.map((d) => normalizeDoc<T>(d.data(), d.id));
+          callback(items);
+        },
+        (error) => {
+          console.error(`[Firestore] Error subscribing to ${collectionName}:`, error.message);
+          // Still call callback with empty array so UI doesn't hang on loading
+          callback([]);
+        }
+      );
     },
 
     /**
@@ -85,16 +93,23 @@ function createService<T extends { id: string }>(
       constraints: QueryConstraint[]
     ): Unsubscribe {
       const q = query(colRef, ...constraints);
-      return onSnapshot(q, (snapshot) => {
-        const items = snapshot.docs.map((d) => normalizeDoc<T>(d.data(), d.id));
-        callback(items);
-      });
+      return onSnapshot(
+        q,
+        (snapshot) => {
+          const items = snapshot.docs.map((d) => normalizeDoc<T>(d.data(), d.id));
+          callback(items);
+        },
+        (error) => {
+          console.error(`[Firestore] Error subscribing to ${collectionName}:`, error.message);
+          callback([]);
+        }
+      );
     },
 
     /**
      * Create a new document.
      */
-    async create(data: Omit<T, 'id'>): Promise<string> {
+    async create(data: Omit<T, 'id' | 'createdAt'>): Promise<string> {
       const docRef = await addDoc(colRef, {
         ...data,
         createdAt: serverTimestamp(),
@@ -213,6 +228,16 @@ export function subscribeTeamTrainings(teamId: string, callback: (trainings: Tra
 /** Subscribe to matches for a specific team */
 export function subscribeTeamMatches(teamId: string, callback: (matches: Match[]) => void): Unsubscribe {
   return matchesService.subscribe(callback, [where('teamId', '==', teamId)]);
+}
+
+/** Subscribe to all matches for a specific club */
+export function subscribeClubMatches(clubId: string, callback: (matches: Match[]) => void): Unsubscribe {
+  return matchesService.subscribe(callback, [where('clubId', '==', clubId)]);
+}
+
+/** Subscribe to all trainings for a specific club */
+export function subscribeClubTrainings(clubId: string, callback: (trainings: Training[]) => void): Unsubscribe {
+  return trainingsService.subscribe(callback, [where('clubId', '==', clubId)]);
 }
 
 /** Subscribe to announcements for a specific club */
