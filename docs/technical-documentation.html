@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FC Austria Manager - Technische Dokumentation v1.0</title>
+<style>
+  :root {
+    --emerald: #059669;
+    --emerald-light: #d1fae5;
+    --emerald-dark: #065f46;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-500: #6b7280;
+    --gray-700: #374151;
+    --gray-900: #111827;
+    --blue: #2563eb;
+    --amber: #d97706;
+    --red: #dc2626;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: var(--gray-900);
+    line-height: 1.7;
+    background: #fff;
+    font-size: 14px;
+  }
+  @media print {
+    body { font-size: 11px; }
+    .no-print { display: none; }
+    .page-break { page-break-before: always; }
+    section { page-break-inside: avoid; }
+  }
+
+  /* Cover Page */
+  .cover {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, var(--emerald-dark) 0%, var(--emerald) 50%, #10b981 100%);
+    color: #fff;
+    text-align: center;
+    padding: 4rem 2rem;
+  }
+  .cover-logo {
+    width: 120px; height: 120px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 24px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 48px; font-weight: 800;
+    margin-bottom: 2rem;
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255,255,255,0.2);
+  }
+  .cover h1 { font-size: 3rem; font-weight: 800; margin-bottom: 0.5rem; }
+  .cover h2 { font-size: 1.5rem; font-weight: 400; opacity: 0.9; margin-bottom: 3rem; }
+  .cover-meta { opacity: 0.8; font-size: 1rem; line-height: 2; }
+  .cover-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.2);
+    padding: 0.5rem 1.5rem;
+    border-radius: 999px;
+    font-weight: 600;
+    margin-top: 2rem;
+    backdrop-filter: blur(5px);
+  }
+
+  /* Table of Contents */
+  .toc { padding: 3rem; max-width: 900px; margin: 0 auto; }
+  .toc h2 { font-size: 2rem; color: var(--emerald-dark); margin-bottom: 2rem; border-bottom: 3px solid var(--emerald); padding-bottom: 0.5rem; }
+  .toc-list { list-style: none; counter-reset: toc; }
+  .toc-list li {
+    counter-increment: toc;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .toc-list li::before {
+    content: counter(toc, decimal-leading-zero);
+    color: var(--emerald);
+    font-weight: 700;
+    font-size: 1.1rem;
+    min-width: 2rem;
+  }
+  .toc-list a {
+    color: var(--gray-700);
+    text-decoration: none;
+    font-size: 1.05rem;
+    flex: 1;
+  }
+  .toc-list a:hover { color: var(--emerald); }
+  .toc-list .toc-page { color: var(--gray-500); font-size: 0.9rem; }
+
+  /* Main Content */
+  .content { max-width: 900px; margin: 0 auto; padding: 2rem 3rem; }
+
+  /* Sections */
+  section { margin-bottom: 3rem; }
+  section h2 {
+    font-size: 1.75rem;
+    color: var(--emerald-dark);
+    border-bottom: 3px solid var(--emerald);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  section h2 .section-num {
+    background: var(--emerald);
+    color: #fff;
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+  section h3 {
+    font-size: 1.25rem;
+    color: var(--gray-900);
+    margin: 2rem 0 1rem;
+    padding-left: 0.75rem;
+    border-left: 4px solid var(--emerald);
+  }
+  section h4 {
+    font-size: 1.05rem;
+    color: var(--gray-700);
+    margin: 1.5rem 0 0.75rem;
+    font-weight: 600;
+  }
+  p { margin-bottom: 1rem; }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0 2rem;
+    font-size: 0.9rem;
+  }
+  thead th {
+    background: var(--emerald-dark);
+    color: #fff;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  tbody td {
+    padding: 0.65rem 1rem;
+    border-bottom: 1px solid var(--gray-200);
+    vertical-align: top;
+  }
+  tbody tr:nth-child(even) { background: var(--gray-50); }
+  tbody tr:hover { background: var(--emerald-light); }
+
+  /* Code */
+  code {
+    background: var(--gray-100);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-family: 'Fira Code', 'Consolas', monospace;
+    font-size: 0.85em;
+    color: var(--emerald-dark);
+  }
+  pre {
+    background: var(--gray-900);
+    color: #e5e7eb;
+    padding: 1.25rem 1.5rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 1rem 0 1.5rem;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    border-left: 4px solid var(--emerald);
+  }
+  pre code {
+    background: none;
+    color: inherit;
+    padding: 0;
+  }
+
+  /* Info Boxes */
+  .info-box {
+    padding: 1rem 1.25rem;
+    border-radius: 8px;
+    margin: 1rem 0 1.5rem;
+    border-left: 4px solid;
+  }
+  .info-box.note { background: #eff6ff; border-color: var(--blue); }
+  .info-box.warning { background: #fffbeb; border-color: var(--amber); }
+  .info-box.danger { background: #fef2f2; border-color: var(--red); }
+  .info-box.success { background: var(--emerald-light); border-color: var(--emerald); }
+  .info-box strong { display: block; margin-bottom: 0.25rem; }
+
+  /* Diagrams (ASCII/SVG placeholders) */
+  .diagram {
+    background: var(--gray-50);
+    border: 2px dashed var(--gray-300);
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 1.5rem 0;
+    text-align: center;
+    font-family: monospace;
+    white-space: pre;
+    line-height: 1.4;
+    font-size: 0.8rem;
+    overflow-x: auto;
+  }
+
+  /* Screenshot Placeholder */
+  .screenshot {
+    background: linear-gradient(135deg, var(--gray-100), var(--gray-200));
+    border: 2px dashed var(--gray-300);
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    margin: 1.5rem 0;
+    text-align: center;
+    color: var(--gray-500);
+  }
+  .screenshot .icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+  .screenshot .label { font-weight: 600; font-size: 1rem; }
+  .screenshot .desc { font-size: 0.85rem; margin-top: 0.25rem; }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge-emerald { background: var(--emerald-light); color: var(--emerald-dark); }
+  .badge-blue { background: #dbeafe; color: #1e40af; }
+  .badge-amber { background: #fef3c7; color: #92400e; }
+  .badge-red { background: #fee2e2; color: #991b1b; }
+  .badge-gray { background: var(--gray-100); color: var(--gray-700); }
+
+  /* Version History Table */
+  .version-table td:first-child { font-weight: 700; color: var(--emerald); white-space: nowrap; }
+
+  /* Flow Diagrams */
+  .flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin: 0.75rem 0;
+  }
+  .flow-num {
+    background: var(--emerald);
+    color: #fff;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+  }
+  .flow-content { flex: 1; }
+  .flow-content strong { color: var(--gray-900); }
+  .flow-connector {
+    width: 2px;
+    height: 20px;
+    background: var(--gray-300);
+    margin-left: 13px;
+  }
+
+  /* Metric Cards */
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+  .metric-card {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    padding: 1.25rem;
+    text-align: center;
+  }
+  .metric-value { font-size: 2rem; font-weight: 800; color: var(--emerald); }
+  .metric-label { font-size: 0.8rem; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 0.25rem; }
+
+  /* Footer */
+  .doc-footer {
+    text-align: center;
+    padding: 3rem;
+    color: var(--gray-500);
+    border-top: 2px solid var(--gray-200);
+    margin-top: 4rem;
+    font-size: 0.85rem;
+  }
+
+  ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+  li { margin-bottom: 0.35rem; }
+</style>
+</head>
+<body>
+
+<!-- ================================================================== -->
+<!-- COVER PAGE -->
+<!-- ================================================================== -->
+<div class="cover">
+  <div class="cover-logo">FC</div>
+  <h1>FC Austria Manager</h1>
+  <h2>Technische Dokumentation &amp; System Report</h2>
+  <div class="cover-meta">
+    <strong>Version 1.0.0</strong><br>
+    Projektverantwortlicher: Achmed Dadakaev<br>
+    Erstellungsdatum: 05. M&auml;rz 2026<br>
+    Plattform: Web Application (SaaS)<br>
+    Repository: github.com/dadakaev10-sketch/FC-Austria-Manager
+  </div>
+  <div class="cover-badge">CONFIDENTIAL &mdash; Internal Use Only</div>
+</div>
+
+<!-- ================================================================== -->
+<!-- TABLE OF CONTENTS -->
+<!-- ================================================================== -->
+<div class="toc page-break">
+  <h2>Inhaltsverzeichnis</h2>
+  <ol class="toc-list">
+    <li><a href="#sec1">Executive Summary</a></li>
+    <li><a href="#sec2">Product Vision &amp; Ziele</a></li>
+    <li><a href="#sec3">System Architecture</a></li>
+    <li><a href="#sec4">Backend Architecture</a></li>
+    <li><a href="#sec5">Frontend Architecture</a></li>
+    <li><a href="#sec6">Database Schema Documentation</a></li>
+    <li><a href="#sec7">Menu Structure &amp; Navigation</a></li>
+    <li><a href="#sec8">Feature Documentation</a></li>
+    <li><a href="#sec9">User Flow Diagrams</a></li>
+    <li><a href="#sec10">User Manual / Bedienungsanleitung</a></li>
+    <li><a href="#sec11">Security Architecture</a></li>
+    <li><a href="#sec12">Scalability Strategy</a></li>
+    <li><a href="#sec13">Development Roadmap</a></li>
+    <li><a href="#sec14">Appendix &mdash; Technische Details</a></li>
+  </ol>
+</div>
+
+<!-- ================================================================== -->
+<!-- CONTENT -->
+<!-- ================================================================== -->
+<div class="content">
+
+<!-- ============================================================ -->
+<!-- 1. EXECUTIVE SUMMARY -->
+<!-- ============================================================ -->
+<section id="sec1" class="page-break">
+  <h2><span class="section-num">01</span> Executive Summary</h2>
+
+  <p><strong>FC Austria Manager</strong> ist eine moderne, cloud-basierte Webapplikation zur vollst&auml;ndigen Verwaltung von Fussballvereinen. Die Plattform richtet sich an Jugendakademien, Amateurvereine und semi-professionelle Clubs in &Ouml;sterreich und dem DACH-Raum.</p>
+
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="metric-value">16</div>
+      <div class="metric-label">App-Seiten</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">12</div>
+      <div class="metric-label">Firestore Collections</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">31+</div>
+      <div class="metric-label">UI Components</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">61</div>
+      <div class="metric-label">Source Files</div>
+    </div>
+  </div>
+
+  <h3>Technologie-Stack</h3>
+  <table>
+    <thead><tr><th>Kategorie</th><th>Technologie</th><th>Version</th></tr></thead>
+    <tbody>
+      <tr><td>Framework</td><td>Next.js (App Router, Turbopack)</td><td>16.1.6</td></tr>
+      <tr><td>UI Library</td><td>React</td><td>19.2.3</td></tr>
+      <tr><td>Sprache</td><td>TypeScript (strict mode)</td><td>5.x</td></tr>
+      <tr><td>Styling</td><td>TailwindCSS</td><td>4.x</td></tr>
+      <tr><td>State Management</td><td>Zustand</td><td>5.0.11</td></tr>
+      <tr><td>Backend/DB</td><td>Firebase (Firestore + Auth)</td><td>12.10.0</td></tr>
+      <tr><td>Charts</td><td>Recharts</td><td>3.7.0</td></tr>
+      <tr><td>Icons</td><td>Lucide React</td><td>0.577.0</td></tr>
+      <tr><td>Datum</td><td>date-fns</td><td>4.1.0</td></tr>
+      <tr><td>Hosting</td><td>Vercel</td><td>Edge Network</td></tr>
+    </tbody>
+  </table>
+
+  <div class="info-box success">
+    <strong>Kernmerkmale</strong>
+    Echtzeit-Datensynchronisation, Multi-Tenancy mit Club-Isolation, rollenbasierte Zugriffskontrolle (RBAC), responsives Design f&uuml;r Mobile/Tablet/Desktop, Demo-Modus ohne Registrierung, deutschsprachige Benutzeroberfl&auml;che.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 2. PRODUCT VISION -->
+<!-- ============================================================ -->
+<section id="sec2" class="page-break">
+  <h2><span class="section-num">02</span> Product Vision &amp; Ziele</h2>
+
+  <h3>Vision Statement</h3>
+  <p>FC Austria Manager soll die zentrale digitale Plattform f&uuml;r &ouml;sterreichische Fussballvereine werden &mdash; von der Jugendakademie bis zur Kampfmannschaft. Die Applikation vereint Mannschaftsverwaltung, Trainingsplanung, Spielmanagement und Vereinskommunikation in einer einheitlichen, intuitiven Oberfl&auml;che.</p>
+
+  <h3>Zielgruppen</h3>
+  <table>
+    <thead><tr><th>Rolle</th><th>Beschreibung</th><th>Hauptfunktionen</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge badge-emerald">Admin</span></td><td>Vereinsvorstand / IT-Verantwortlicher</td><td>Vollzugriff, Benutzerverwaltung, Vereinseinstellungen</td></tr>
+      <tr><td><span class="badge badge-blue">Manager</span></td><td>Sportlicher Leiter</td><td>Teams, Spieler, Trainings, Spiele verwalten</td></tr>
+      <tr><td><span class="badge badge-amber">Coach</span></td><td>Trainer der Mannschaft</td><td>Training planen, Anwesenheit, Spielaufstellung</td></tr>
+      <tr><td><span class="badge badge-gray">Assistant Coach</span></td><td>Co-Trainer</td><td>Trainings einsehen, Anwesenheit markieren</td></tr>
+      <tr><td><span class="badge badge-gray">Player</span></td><td>Spieler (Jugend)</td><td>Eigene Termine, Statistiken einsehen</td></tr>
+      <tr><td><span class="badge badge-gray">Parent</span></td><td>Eltern/Erziehungsberechtigte</td><td>Termine, Ank&uuml;ndigungen lesen</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Funktionsumfang</h3>
+  <ul>
+    <li><strong>Mannschaftsverwaltung</strong> &mdash; Teams nach Alterskategorien (U8&ndash;Kampfmannschaft), Spielerzuordnung</li>
+    <li><strong>Spielerverwaltung</strong> &mdash; Vollst&auml;ndige Profile, Statistiken (8 Attribute), Multi-Team-Zuordnung</li>
+    <li><strong>Trainingsplanung</strong> &mdash; Einheiten erstellen, Anwesenheit tracken, Schwerpunkte dokumentieren</li>
+    <li><strong>Spielmanagement</strong> &mdash; Ergebnisse, Ereignisse (Tore, Karten), Wettbewerbe</li>
+    <li><strong>Kalender</strong> &mdash; Monats-/Wochenansicht, alle Termine aggregiert</li>
+    <li><strong>Kommunikation</strong> &mdash; Ank&uuml;ndigungen, automatische Erinnerungen</li>
+    <li><strong>Statistiken</strong> &mdash; Mannschaftsleistung, Tore-Vergleich, Spielerauswertung</li>
+    <li><strong>Einstellungen</strong> &mdash; Profil, Vereinsdaten, Rollenverwaltung</li>
+  </ul>
+</section>
+
+<!-- ============================================================ -->
+<!-- 3. SYSTEM ARCHITECTURE -->
+<!-- ============================================================ -->
+<section id="sec3" class="page-break">
+  <h2><span class="section-num">03</span> System Architecture</h2>
+
+  <h3>High-Level Architecture Diagram</h3>
+  <div class="diagram">
++------------------------------------------------------------------+
+|                        CLIENT (Browser)                          |
+|                                                                  |
+|  +------------------+  +------------------+  +----------------+  |
+|  |   Next.js 16     |  |   React 19       |  | TailwindCSS 4  |  |
+|  |   App Router     |  |   Components     |  | Styling        |  |
+|  +--------+---------+  +--------+---------+  +----------------+  |
+|           |                      |                               |
+|  +--------v----------------------v---------+                     |
+|  |          Zustand State Stores           |                     |
+|  |  AuthStore | ClubStore | UIStore        |                     |
+|  +--------+-------------------------------+                      |
+|           |                                                      |
+|  +--------v-------------------------------+                      |
+|  |     Firebase SDK (Client-Side)         |                      |
+|  |  onSnapshot | addDoc | updateDoc       |                      |
+|  +--------+-------------------------------+                      |
++-----------|------------------------------------------------------+
+            | HTTPS / WebSocket (Real-time)
+            v
++------------------------------------------------------------------+
+|                    FIREBASE CLOUD (Google)                        |
+|                                                                  |
+|  +------------------+  +------------------+  +----------------+  |
+|  |   Firestore DB   |  | Firebase Auth    |  | Cloud Storage  |  |
+|  |   12 Collections |  | Email/Password   |  | (geplant)      |  |
+|  +------------------+  +------------------+  +----------------+  |
+|                                                                  |
+|  +------------------+  +------------------+                      |
+|  | Security Rules   |  | Composite Indexes|                      |
+|  | (firestore.rules)|  | (11 definiert)   |                      |
+|  +------------------+  +------------------+                      |
++------------------------------------------------------------------+
+            |
+            v
++------------------------------------------------------------------+
+|                     VERCEL (Hosting)                              |
+|  +------------------+  +------------------+  +----------------+  |
+|  | Edge Network     |  | Auto Deploy      |  | SSL/TLS        |  |
+|  | Global CDN       |  | GitHub CI/CD     |  | HTTPS          |  |
+|  +------------------+  +------------------+  +----------------+  |
++------------------------------------------------------------------+
+  </div>
+
+  <h3>Architekturprinzipien</h3>
+  <ol>
+    <li><strong>Client-Side First</strong> &mdash; Keine serverseitige Logik; das gesamte Business-Logic l&auml;uft im Browser via Firebase SDK.</li>
+    <li><strong>Real-Time by Default</strong> &mdash; Firestore <code>onSnapshot</code> Listener f&uuml;r alle Daten, sofortige UI-Updates.</li>
+    <li><strong>Multi-Tenancy via clubId</strong> &mdash; Jeder Datensatz enth&auml;lt ein <code>clubId</code> Feld; Client filtert automatisch.</li>
+    <li><strong>Component-Driven</strong> &mdash; Wiederverwendbare UI-Komponenten mit klarer Trennung.</li>
+    <li><strong>Type-Safe</strong> &mdash; TypeScript strict mode, alle Daten-Interfaces in <code>database.ts</code> definiert.</li>
+  </ol>
+
+  <h3>Deployment Pipeline</h3>
+  <div class="diagram">
+  Developer  -->  git push  -->  GitHub (main)  -->  Vercel Auto-Deploy
+                                     |
+                                     v
+                              Build (Turbopack)
+                              TypeScript Check
+                              Static Generation
+                                     |
+                                     v
+                              Production URL:
+                     fc-austria-manager.vercel.app
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 4. BACKEND ARCHITECTURE -->
+<!-- ============================================================ -->
+<section id="sec4" class="page-break">
+  <h2><span class="section-num">04</span> Backend Architecture</h2>
+
+  <p>Das Backend basiert vollst&auml;ndig auf <strong>Firebase</strong> (Google Cloud). Es gibt keinen eigenen Server &mdash; alle Datenoperationen geschehen direkt vom Client via Firebase SDK.</p>
+
+  <h3>4.1 Firebase Authentication</h3>
+  <p>Authentifizierung erfolgt &uuml;ber Email/Password via Firebase Auth. Bei der Registrierung wird automatisch ein Firestore-Profil unter <code>users/{uid}</code> erstellt.</p>
+  <pre><code>// Registrierung (auth.ts)
+async function signUpWithEmail(email, password, fullName) {
+  const credential = await createUserWithEmailAndPassword(auth, email, password);
+  // Profil in Firestore erstellen
+  await setDoc(doc(db, 'users', credential.user.uid), {
+    fullName,
+    email: credential.user.email,
+    role: 'manager',  // Standard-Rolle
+    clubId: null,      // Wird beim Onboarding gesetzt
+    createdAt: serverTimestamp(),
+  });
+}</code></pre>
+
+  <h3>4.2 Generic Service Factory</h3>
+  <p>Alle Firestore-Collections verwenden eine generische Service-Factory, die CRUD-Operationen und Echtzeit-Subscriptions bereitstellt:</p>
+
+  <pre><code>function createService&lt;T extends { id: string }&gt;(
+  collectionName: string,
+  defaultOrderField: string,
+  defaultOrderDir: 'asc' | 'desc'
+) {
+  return {
+    subscribe(callback, constraints)     // Echtzeit-Listener
+    subscribeCustom(callback, constraints) // Benutzerdefinierte Queries
+    create(data)                         // Dokument erstellen
+    update(id, data)                     // Dokument aktualisieren
+    delete(id)                           // Dokument l&ouml;schen
+    getById(id)                          // Einzeldokument abrufen
+  };
+}</code></pre>
+
+  <h3>4.3 Collection Services</h3>
+  <table>
+    <thead><tr><th>Service</th><th>Collection</th><th>Default Sort</th><th>Richtung</th></tr></thead>
+    <tbody>
+      <tr><td><code>clubsService</code></td><td>clubs</td><td>createdAt</td><td>desc</td></tr>
+      <tr><td><code>teamsService</code></td><td>teams</td><td>category</td><td>asc</td></tr>
+      <tr><td><code>playersService</code></td><td>players</td><td>name</td><td>asc</td></tr>
+      <tr><td><code>playerTeamsService</code></td><td>player_teams</td><td>assignedAt</td><td>desc</td></tr>
+      <tr><td><code>playerStatsService</code></td><td>player_stats</td><td>updatedAt</td><td>desc</td></tr>
+      <tr><td><code>trainingsService</code></td><td>trainings</td><td>date</td><td>desc</td></tr>
+      <tr><td><code>trainingAttendanceService</code></td><td>training_attendance</td><td>trainingId</td><td>asc</td></tr>
+      <tr><td><code>matchesService</code></td><td>matches</td><td>date</td><td>desc</td></tr>
+      <tr><td><code>matchEventsService</code></td><td>match_events</td><td>minute</td><td>asc</td></tr>
+      <tr><td><code>announcementsService</code></td><td>announcements</td><td>createdAt</td><td>desc</td></tr>
+      <tr><td><code>calendarEventsService</code></td><td>calendar_events</td><td>date</td><td>asc</td></tr>
+    </tbody>
+  </table>
+
+  <h3>4.4 Convenience Query Helpers</h3>
+  <table>
+    <thead><tr><th>Funktion</th><th>Query</th><th>Verwendung</th></tr></thead>
+    <tbody>
+      <tr><td><code>subscribeClubTeams(clubId)</code></td><td>where clubId == X</td><td>Dashboard, Sidebar</td></tr>
+      <tr><td><code>subscribeClubPlayers(clubId)</code></td><td>where clubId == X</td><td>Spielerliste</td></tr>
+      <tr><td><code>subscribeClubMatches(clubId)</code></td><td>where clubId == X</td><td>Spiele, Kalender, Dashboard</td></tr>
+      <tr><td><code>subscribeClubTrainings(clubId)</code></td><td>where clubId == X</td><td>Trainings, Kalender</td></tr>
+      <tr><td><code>subscribeClubAnnouncements(clubId)</code></td><td>where clubId == X</td><td>Kommunikation, Dashboard</td></tr>
+      <tr><td><code>subscribeMatchEvents(matchId)</code></td><td>where matchId == X</td><td>Spiel-Detail</td></tr>
+      <tr><td><code>subscribeTrainingAttendance(trainingId)</code></td><td>where trainingId == X</td><td>Training-Detail</td></tr>
+    </tbody>
+  </table>
+
+  <h3>4.5 Error Handling</h3>
+  <p>Alle <code>onSnapshot</code>-Listener implementieren einen Error-Callback, der bei Fehlern (z.B. fehlende Indexes) ein leeres Array zur&uuml;ckgibt, damit die UI nicht im Ladezustand h&auml;ngen bleibt:</p>
+  <pre><code>onSnapshot(q,
+  (snapshot) =&gt; { callback(items); },
+  (error) =&gt; {
+    console.error(`[Firestore] Error: ${error.message}`);
+    callback([]);  // UI bekommt leeres Array statt Endlos-Loading
+  }
+);</code></pre>
+</section>
+
+<!-- ============================================================ -->
+<!-- 5. FRONTEND ARCHITECTURE -->
+<!-- ============================================================ -->
+<section id="sec5" class="page-break">
+  <h2><span class="section-num">05</span> Frontend Architecture</h2>
+
+  <h3>5.1 Projektstruktur</h3>
+  <pre><code>src/
+  app/                          # Next.js App Router
+    (auth)/                     # Auth-Gruppe (Login, Register)
+      login/page.tsx
+      register/page.tsx
+      layout.tsx
+    (dashboard)/                # Dashboard-Gruppe (geschuetzt)
+      dashboard/page.tsx
+      teams/page.tsx
+      teams/[id]/page.tsx
+      players/page.tsx
+      players/[id]/page.tsx
+      trainings/page.tsx
+      trainings/[id]/page.tsx
+      matches/page.tsx
+      matches/[id]/page.tsx
+      calendar/page.tsx
+      communication/page.tsx
+      analytics/page.tsx
+      settings/page.tsx
+      onboarding/page.tsx
+      layout.tsx                # AuthProvider + AppShell
+    layout.tsx                  # Root Layout (Font, Meta)
+    globals.css
+    page.tsx                    # Redirect zu /dashboard
+  components/
+    layout/                     # AppShell, Header, Sidebar
+    providers/                  # AuthProvider
+    ui/                         # 11 Basis-Komponenten
+    teams/                      # Team CRUD Modals
+    players/                    # Player CRUD Modals + Stats
+    trainings/                  # Training CRUD + Attendance
+    matches/                    # Match Event Items
+    analytics/                  # Chart Komponenten
+  stores/
+    auth-store.ts               # Benutzer &amp; Rollen
+    club-store.ts               # Verein, Teams, Spieler
+    ui-store.ts                 # Sidebar, Sprache
+  lib/
+    firebase/config.ts          # Firebase Init
+    firebase/auth.ts            # Auth Funktionen
+    firebase/services.ts        # CRUD Services
+    utils.ts                    # Hilfsfunktionen
+    demo-data.ts                # Demo-Modus Daten
+  types/
+    database.ts                 # Alle Interfaces
+  i18n/                         # Internationalisierung</code></pre>
+
+  <h3>5.2 State Management (Zustand)</h3>
+  <p>Die Applikation verwendet drei Zustand-Stores mit klarer Trennung:</p>
+
+  <div class="diagram">
++---------------------+     +---------------------+     +---------------+
+|     AuthStore       |     |     ClubStore        |     |   UIStore     |
++---------------------+     +---------------------+     +---------------+
+| profile: Profile    |     | currentClub: Club    |     | sidebarOpen   |
+| isLoading: boolean  |     | teams: Team[]        |     | locale: Locale|
+| setProfile()        |     | players: Player[]    |     | toggleSidebar |
+| hasRole()           |     | playerTeams: PT[]    |     | setLocale()   |
+| isCoachOrAbove()    |     | selectedTeamId       |     +---------------+
++---------------------+     | setTeams/addTeam/... |
+                             | setPlayers/add/...   |
+                             +---------------------+
+  </div>
+
+  <h3>5.3 Komponenten-Hierarchie</h3>
+  <div class="diagram">
+RootLayout
+  |-- (auth)Layout
+  |     |-- LoginPage
+  |     +-- RegisterPage
+  |
+  +-- (dashboard)Layout
+        |-- AuthProvider        &lt;-- Firebase Auth Observer
+        +-- AppShell
+              |-- Sidebar       &lt;-- Navigation (9 Links)
+              |-- Header        &lt;-- Club Name, Logout, Notifications
+              +-- {Page}        &lt;-- Aktive Seite (children)
+  </div>
+
+  <h3>5.4 UI Component Library</h3>
+  <table>
+    <thead><tr><th>Komponente</th><th>Datei</th><th>Props</th><th>Beschreibung</th></tr></thead>
+    <tbody>
+      <tr><td>Button</td><td>button.tsx</td><td>variant, size, disabled</td><td>5 Varianten: primary, secondary, outline, ghost, danger</td></tr>
+      <tr><td>Card</td><td>card.tsx</td><td>className</td><td>Container mit CardHeader, CardTitle, CardContent</td></tr>
+      <tr><td>Badge</td><td>badge.tsx</td><td>variant</td><td>Status-Labels: success, info, warning, danger, default</td></tr>
+      <tr><td>Input</td><td>input.tsx</td><td>label, error, type</td><td>Texteingabe mit Label und Fehlermeldung</td></tr>
+      <tr><td>Select</td><td>select.tsx</td><td>label, options, error</td><td>Dropdown-Auswahl</td></tr>
+      <tr><td>Modal</td><td>modal.tsx</td><td>isOpen, onClose, title, size</td><td>Dialog-Overlay</td></tr>
+      <tr><td>Avatar</td><td>avatar.tsx</td><td>src, name, size</td><td>Profilbild mit Initialen-Fallback</td></tr>
+      <tr><td>EmptyState</td><td>empty-state.tsx</td><td>icon, title, description, actionLabel</td><td>Platzhalter f&uuml;r leere Listen</td></tr>
+      <tr><td>StatCard</td><td>stat-card.tsx</td><td>title, value, icon, iconColor</td><td>Dashboard-Metrik-Karte</td></tr>
+      <tr><td>ConfirmDialog</td><td>confirm-dialog.tsx</td><td>isOpen, title, onConfirm</td><td>Best&auml;tigungs-Dialog f&uuml;r L&ouml;schaktionen</td></tr>
+      <tr><td>Slider</td><td>slider.tsx</td><td>value, onChange, min, max</td><td>Bereichsregler f&uuml;r Spieler-Statistiken</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ -->
+<!-- 6. DATABASE SCHEMA -->
+<!-- ============================================================ -->
+<section id="sec6" class="page-break">
+  <h2><span class="section-num">06</span> Database Schema Documentation</h2>
+
+  <h3>Entity Relationship Diagram</h3>
+  <div class="diagram">
++----------+       +----------+       +----------+
+|  users   |------>|  clubs   |<------|  teams   |
+|  (auth)  | clubId|          | clubId|          |
++----------+       +----------+       +----+-----+
+                                           |
+                   +----------+      +-----+------+     +-----------+
+                   | players  |<---->|player_teams|---->|   teams   |
+                   |          |      | (junction) |     |           |
+                   +----+-----+      +------------+     +-----------+
+                        |
+                   +----+-----+
+                   |player_   |
+                   |  stats   |
+                   +----------+
+
++----------+       +----------+       +---------------+
+| trainings|------>|training_ |       |    matches     |
+|          |       |attendance|       |                |
++----------+       +----------+       +-------+-------+
+                                              |
++----------+       +----------+       +-------+-------+
+|announce- |       |calendar_ |       | match_events  |
+|  ments   |       |  events  |       |               |
++----------+       +----------+       +---------------+
+  </div>
+
+  <h3>6.1 users (Firebase Auth + Firestore)</h3>
+  <table>
+    <thead><tr><th>Feld</th><th>Typ</th><th>Pflicht</th><th>Beschreibung</th></tr></thead>
+    <tbody>
+      <tr><td>id</td><td>string</td><td>Ja</td><td>Firebase Auth UID</td></tr>
+      <tr><td>clubId</td><td>string | null</td><td>Nein</td><td>Zugeordneter Verein (null = Onboarding)</td></tr>
+      <tr><td>fullName</td><td>string</td><td>Ja</td><td>Vollst&auml;ndiger Name</td></tr>
+      <tr><td>email</td><td>string</td><td>Ja</td><td>E-Mail-Adresse</td></tr>
+      <tr><td>role</td><td>UserRole</td><td>Ja</td><td>admin | manager | coach | assistant_coach | player | parent</td></tr>
+      <tr><td>avatarUrl</td><td>string | null</td><td>Nein</td><td>Profilbild-URL</td></tr>
+      <tr><td>phone</td><td>string | null</td><td>Nein</td><td>Telefonnummer</td></tr>
+      <tr><td>createdAt</td><td>Timestamp</td><td>Auto</td><td>Erstellungszeitpunkt</td></tr>
+    </tbody>
+  </table>
+
+  <h3>6.2 clubs</h3>
+  <table>
+    <thead><tr><th>Feld</th><th>Typ</th><th>Pflicht</th><th>Beschreibung</th></tr></thead>
+    <tbody>
+      <tr><td>id</td><td>string</td><td>Auto</td><td>Firestore Document ID</td></tr>
+      <tr><td>name</td><td>string</td><td>Ja</td><td>Vereinsname</td></tr>
+      <tr><td>logoUrl</td><td>string | null</td><td>Nein</td><td>Vereinslogo</td></tr>
+      <tr><td>address</td><td>string | null</td><td>Nein</td><td>Adresse</td></tr>
+      <tr><td>city</td><td>string | null</td><td>Nein</td><td>Stadt</td></tr>
+      <tr><td>country</td><td>string | null</td><td>Nein</td><td>Land (Standard: &Ouml;sterreich)</td></tr>
+      <tr><td>foundedYear</td><td>number | null</td><td>Nein</td><td>Gr&uuml;ndungsjahr</td></tr>
+      <tr><td>website</td><td>string | null</td><td>Nein</td><td>Vereinswebsite</td></tr>
+      <tr><td>createdAt</td><td>Timestamp</td><td>Auto</td><td>Erstellungszeitpunkt</td></tr>
+    </tbody>
+  </table>
+
+  <h3>6.3 teams</h3>
+  <table>
+    <thead><tr><th>Feld</th><th>Typ</th><th>Pflicht</th><th>Beschreibung</th></tr></thead>
+    <tbody>
+      <tr><td>id</td><td>string</td><td>Auto</td><td>Document ID</td></tr>
+      <tr><td>clubId</td><td>string</td><td>Ja</td><td>Vereinszuordnung</td></tr>
+      <tr><td>name</td><td>string</td><td>Ja</td><td>Mannschaftsname</td></tr>
+      <tr><td>category</td><td>TeamCategory</td><td>Ja</td><td>U8|U10|...|U21|Kampfmannschaft|Reserve</td></tr>
+      <tr><td>season</td><td>string</td><td>Ja</td><td>z.B. &quot;2025/2026&quot;</td></tr>
+      <tr><td>coachId</td><td>string | null</td><td>Nein</td><td>Trainer User-ID</td></tr>
+      <tr><td>assistantCoachId</td><td>string | null</td><td>Nein</td><td>Co-Trainer User-ID</td></tr>
+      <tr><td>createdAt</td><td>Timestamp</td><td>Auto</td><td>Erstellungszeitpunkt</td></tr>
+    </tbody>
+  </table>
+
+  <h3>6.4 players</h3>
+  <table>
+    <thead><tr><th>Feld</th><th>Typ</th><th>Pflicht</th><th>Beschreibung</th></tr></thead>
+    <tbody>
+      <tr><td>id</td><td>string</td><td>Auto</td><td>Document ID</td></tr>
+      <tr><td>clubId</td><td>string</td><td>Ja</td><td>Vereinszuordnung</td></tr>
+      <tr><td>name</td><td>string</td><td>Ja</td><td>Spielername</td></tr>
+      <tr><td>dateOfBirth</td><td>string | null</td><td>Nein</td><td>Geburtsdatum (ISO)</td></tr>
+      <tr><td>position</td><td>string | null</td><td>Nein</td><td>goalkeeper, defender, midfielder, forward, etc.</td></tr>
+      <tr><td>preferredFoot</td><td>left|right|both|null</td><td>Nein</td><td>Bevorzugter Fuss</td></tr>
+      <tr><td>height</td><td>number | null</td><td>Nein</td><td>Gr&ouml;sse in cm</td></tr>
+      <tr><td>weight</td><td>number | null</td><td>Nein</td><td>Gewicht in kg</td></tr>
+      <tr><td>jerseyNumber</td><td>number | null</td><td>Nein</td><td>R&uuml;ckennummer</td></tr>
+      <tr><td>contactEmail</td><td>string | null</td><td>Nein</td><td>Spieler E-Mail</td></tr>
+      <tr><td>contactPhone</td><td>string | null</td><td>Nein</td><td>Spieler Telefon</td></tr>
+      <tr><td>parentName</td><td>string | null</td><td>Nein</td><td>Name des Erziehungsberechtigten</td></tr>
+      <tr><td>parentEmail</td><td>string | null</td><td>Nein</td><td>Eltern E-Mail</td></tr>
+      <tr><td>parentPhone</td><td>string | null</td><td>Nein</td><td>Eltern Telefon</td></tr>
+      <tr><td>photoUrl</td><td>string | null</td><td>Nein</td><td>Spielerfoto</td></tr>
+      <tr><td>createdAt</td><td>Timestamp</td><td>Auto</td><td>Erstellungszeitpunkt</td></tr>
+    </tbody>
+  </table>
+
+  <h3>6.5 player_teams (Junction Table)</h3>
+  <table>
+    <thead><tr><th>Feld</th><th>Typ</th><th>Beschreibung</th></tr></thead>
+    <tbody>
+      <tr><td>id</td><td>string</td><td>Document ID</td></tr>
+      <tr><td>playerId</td><td>string</td><td>Referenz auf players</td></tr>
+      <tr><td>teamId</td><td>string</td><td>Referenz auf teams</td></tr>
+      <tr><td>assignedAt</td><td>string</td><td>Zuordnungszeitpunkt</td></tr>
+    </tbody>
+  </table>
+
+  <div class="info-box note">
+    <strong>Many-to-Many Beziehung</strong>
+    Ein Spieler kann mehreren Mannschaften zugeordnet sein (z.B. U17 + Kampfmannschaft). Die Junction Table <code>player_teams</code> erm&ouml;glicht diese flexible Zuordnung.
+  </div>
+
+  <h3>6.6 player_stats</h3>
+  <table>
+    <thead><tr><th>Feld</th><th>Typ</th><th>Beschreibung</th></tr></thead>
+    <tbody>
+      <tr><td>id</td><td>string</td><td>Document ID</td></tr>
+      <tr><td>playerId</td><td>string</td><td>Referenz auf players</td></tr>
+      <tr><td>speed</td><td>number (0&ndash;10)</td><td>Schnelligkeit</td></tr>
+      <tr><td>stamina</td><td>number (0&ndash;10)</td><td>Ausdauer</td></tr>
+      <tr><td>technique</td><td>number (0&ndash;10)</td><td>Technik</td></tr>
+      <tr><td>passing</td><td>number (0&ndash;10)</td><td>Passspiel</td></tr>
+      <tr><td>shooting</td><td>number (0&ndash;10)</td><td>Schussst&auml;rke</td></tr>
+      <tr><td>dribbling</td><td>number (0&ndash;10)</td><td>Dribbling</td></tr>
+      <tr><td>defense</td><td>number (0&ndash;10)</td><td>Defensivst&auml;rke</td></tr>
+      <tr><td>tacticalUnderstanding</td><td>number (0&ndash;10)</td><td>Taktisches Verst&auml;ndnis</td></tr>
+      <tr><td>updatedAt</td><td>string</td><td>Letzte Aktualisierung</td></tr>
+    </tbody>
+  </table>
+
+  <h3>6.7 trainings</h3>
+  <table>
+    <thead><tr><th>Feld</th><th>Typ</th><th>Beschreibung</th></tr></thead>
+    <tbody>
+      <tr><td>id / clubId / teamId</td><td>string</td><td>IDs</td></tr>
+      <tr><td>date</td><td>string (ISO)</td><td>Trainingsdatum</td></tr>
+      <tr><td>startTime / endTime</td><td>string (HH:MM)</td><td>Zeitraum</td></tr>
+      <tr><td>location</td><td>string</td><td>Trainingsort</td></tr>
+      <tr><td>focus</td><td>string</td><td>Schwerpunkt (z.B. Passspiel)</td></tr>
+      <tr><td>notes</td><td>string | null</td><td>Notizen</td></tr>
+      <tr><td>createdBy</td><td>string</td><td>Ersteller User-ID</td></tr>
+    </tbody>
+  </table>
+
+  <h3>6.8 matches</h3>
+  <table>
+    <thead><tr><th>Feld</th><th>Typ</th><th>Beschreibung</th></tr></thead>
+    <tbody>
+      <tr><td>id / clubId / teamId</td><td>string</td><td>IDs</td></tr>
+      <tr><td>opponent</td><td>string</td><td>Gegner</td></tr>
+      <tr><td>competition</td><td>string | null</td><td>Wettbewerb (z.B. Bundesliga)</td></tr>
+      <tr><td>date / time</td><td>string</td><td>Datum und Anstosszeit</td></tr>
+      <tr><td>location</td><td>string | null</td><td>Spielort</td></tr>
+      <tr><td>homeOrAway</td><td>'home' | 'away'</td><td>Heim / Ausw&auml;rts</td></tr>
+      <tr><td>scoreHome / scoreAway</td><td>number | null</td><td>Endergebnis (null = kommend)</td></tr>
+      <tr><td>notes</td><td>string | null</td><td>Spielnotizen</td></tr>
+    </tbody>
+  </table>
+
+  <h3>6.9 match_events</h3>
+  <table>
+    <thead><tr><th>Feld</th><th>Typ</th><th>Beschreibung</th></tr></thead>
+    <tbody>
+      <tr><td>matchId</td><td>string</td><td>Referenz auf matches</td></tr>
+      <tr><td>playerId</td><td>string</td><td>Beteiligter Spieler</td></tr>
+      <tr><td>eventType</td><td>goal|assist|card|substitution</td><td>Ereignistyp</td></tr>
+      <tr><td>minute</td><td>number</td><td>Spielminute</td></tr>
+      <tr><td>details</td><td>string | null</td><td>Zus&auml;tzliche Details</td></tr>
+    </tbody>
+  </table>
+
+  <h3>6.10 Composite Indexes</h3>
+  <table>
+    <thead><tr><th>Collection</th><th>Feld 1</th><th>Feld 2</th><th>Zweck</th></tr></thead>
+    <tbody>
+      <tr><td>teams</td><td>clubId (ASC)</td><td>category (ASC)</td><td>Teams nach Kategorie filtern</td></tr>
+      <tr><td>players</td><td>clubId (ASC)</td><td>name (ASC)</td><td>Spieler alphabetisch</td></tr>
+      <tr><td>trainings</td><td>clubId (ASC)</td><td>date (DESC)</td><td>Vereinstrainings chronologisch</td></tr>
+      <tr><td>trainings</td><td>teamId (ASC)</td><td>date (DESC)</td><td>Team-Trainings</td></tr>
+      <tr><td>matches</td><td>clubId (ASC)</td><td>date (DESC)</td><td>Vereinsspiele</td></tr>
+      <tr><td>matches</td><td>teamId (ASC)</td><td>date (DESC)</td><td>Team-Spiele</td></tr>
+      <tr><td>match_events</td><td>matchId (ASC)</td><td>minute (ASC)</td><td>Spielereignisse sortiert</td></tr>
+      <tr><td>announcements</td><td>clubId (ASC)</td><td>createdAt (DESC)</td><td>Neueste Ank&uuml;ndigungen</td></tr>
+      <tr><td>calendar_events</td><td>clubId (ASC)</td><td>date (ASC)</td><td>Kalendereintr&auml;ge</td></tr>
+      <tr><td>player_stats</td><td>playerId (ASC)</td><td>updatedAt (DESC)</td><td>Spielerstatistiken</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ -->
+<!-- 7. MENU STRUCTURE -->
+<!-- ============================================================ -->
+<section id="sec7" class="page-break">
+  <h2><span class="section-num">07</span> Menu Structure &amp; Navigation</h2>
+
+  <h3>Sidebar Navigation</h3>
+  <table>
+    <thead><tr><th>Icon</th><th>Men&uuml;punkt</th><th>Route</th><th>Beschreibung</th></tr></thead>
+    <tbody>
+      <tr><td>&#x1F4CA;</td><td>Dashboard</td><td>/dashboard</td><td>&Uuml;bersicht mit Statistiken</td></tr>
+      <tr><td>&#x1F465;</td><td>Teams</td><td>/teams</td><td>Mannschaftsverwaltung</td></tr>
+      <tr><td>&#x1F464;</td><td>Spieler</td><td>/players</td><td>Spielerkader</td></tr>
+      <tr><td>&#x1F3CB;</td><td>Trainings</td><td>/trainings</td><td>Trainingseinheiten</td></tr>
+      <tr><td>&#x1F3C6;</td><td>Spiele</td><td>/matches</td><td>Begegnungen &amp; Ergebnisse</td></tr>
+      <tr><td>&#x1F4C8;</td><td>Statistiken</td><td>/analytics</td><td>Auswertungen &amp; Charts</td></tr>
+      <tr><td>&#x1F4C5;</td><td>Kalender</td><td>/calendar</td><td>Terminkalender</td></tr>
+      <tr><td>&#x1F4AC;</td><td>Kommunikation</td><td>/communication</td><td>Ank&uuml;ndigungen</td></tr>
+      <tr><td>&#x2699;</td><td>Einstellungen</td><td>/settings</td><td>Profil &amp; Vereinsdaten</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Header-Leiste</h3>
+  <table>
+    <thead><tr><th>Position</th><th>Element</th><th>Funktion</th></tr></thead>
+    <tbody>
+      <tr><td>Links</td><td>Vereinsname</td><td>Zeigt den aktuellen Verein</td></tr>
+      <tr><td>Rechts</td><td>Suche (Icon)</td><td>Globale Suchfunktion (geplant)</td></tr>
+      <tr><td>Rechts</td><td>Benachrichtigungen (Glocke)</td><td>Notification Badge</td></tr>
+      <tr><td>Rechts</td><td>Abmelden (Icon)</td><td>Logout &amp; Redirect zum Login</td></tr>
+    </tbody>
+  </table>
+
+  <div class="screenshot">
+    <div class="icon">&#x1F5BC;</div>
+    <div class="label">Screenshot: Sidebar &amp; Header Layout</div>
+    <div class="desc">Zeigt die eingeklappte und ausgeklappte Sidebar mit allen Men&uuml;punkten</div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 8. FEATURE DOCUMENTATION -->
+<!-- ============================================================ -->
+<section id="sec8" class="page-break">
+  <h2><span class="section-num">08</span> Feature Documentation</h2>
+
+  <h3>8.1 Dashboard</h3>
+  <p>Die Startseite zeigt eine Gesamt&uuml;bersicht des Vereins mit vier Statistik-Karten, dem n&auml;chsten Training, kommenden Spielen und den letzten Ank&uuml;ndigungen.</p>
+  <table>
+    <thead><tr><th>Feature</th><th>Datenquelle</th><th>Aktualisierung</th></tr></thead>
+    <tbody>
+      <tr><td>Spieler gesamt</td><td>ClubStore.players.length</td><td>Echtzeit</td></tr>
+      <tr><td>Kommende Trainings</td><td>Firestore trainings (date &ge; heute)</td><td>Echtzeit</td></tr>
+      <tr><td>Kommende Spiele</td><td>Firestore matches (date &ge; heute)</td><td>Echtzeit</td></tr>
+      <tr><td>N&auml;chstes Training</td><td>Erstes Training mit date &ge; heute</td><td>Echtzeit</td></tr>
+      <tr><td>Kommende Spiele (Liste)</td><td>Top 5 ungespielte Matches</td><td>Echtzeit</td></tr>
+      <tr><td>Letzte Aktivit&auml;ten</td><td>Top 5 Announcements</td><td>Echtzeit</td></tr>
+    </tbody>
+  </table>
+
+  <div class="screenshot">
+    <div class="icon">&#x1F5BC;</div>
+    <div class="label">Screenshot: Dashboard &Uuml;bersicht</div>
+    <div class="desc">Statistik-Karten, n&auml;chstes Training, kommende Spiele, Ank&uuml;ndigungen</div>
+  </div>
+
+  <h3>8.2 Mannschaftsverwaltung (Teams)</h3>
+  <ul>
+    <li><strong>Liste:</strong> Grid-Ansicht aller Teams mit Kategorie-Badge, Saison, Spieleranzahl, Trainer</li>
+    <li><strong>Erstellen:</strong> Modal mit Name, Kategorie (U8&ndash;Kampfmannschaft), Saison</li>
+    <li><strong>Detail:</strong> Kader-Tab mit Spielertabelle, Links zu Spielerprofilen</li>
+    <li><strong>Bearbeiten/L&ouml;schen:</strong> Hover-Overlay mit Stift- und Papierkorb-Icons</li>
+  </ul>
+
+  <h3>8.3 Spielerverwaltung (Players)</h3>
+  <ul>
+    <li><strong>Liste:</strong> Tabellenansicht mit Suche, Team-Filter, Position-Filter</li>
+    <li><strong>Profil:</strong> Vollst&auml;ndige Spielerdaten (K&ouml;rperma&szlig;e, Kontakt, Eltern-Info)</li>
+    <li><strong>Statistiken:</strong> 8 Attribute auf 0&ndash;10 Skala mit visuellen Balken</li>
+    <li><strong>Multi-Team:</strong> Spieler k&ouml;nnen mehreren Mannschaften zugeordnet sein</li>
+  </ul>
+
+  <h3>8.4 Trainingsplanung</h3>
+  <ul>
+    <li><strong>Liste:</strong> Gruppiert nach Heute/Diese Woche/Vergangen</li>
+    <li><strong>Erstellen:</strong> Mannschaft, Datum, Zeit, Ort, Schwerpunkt, Notizen</li>
+    <li><strong>Detail:</strong> &Uuml;bersicht + Anwesenheits-Tab mit Spieler-Checklist</li>
+    <li><strong>Attendance:</strong> 4 Status: Anwesend, Versp&auml;tet, Verletzt, Abwesend</li>
+  </ul>
+
+  <h3>8.5 Spielmanagement (Matches)</h3>
+  <ul>
+    <li><strong>Kommende Spiele:</strong> Gegner, Heim/Ausw&auml;rts-Badge, Datum, Wettbewerb</li>
+    <li><strong>Ergebnisse:</strong> Endstand mit Sieg/Unentschieden/Niederlage-Badge</li>
+    <li><strong>Detail:</strong> Ergebnis bearbeiten, Spielereignisse (Tore, Karten, Wechsel) hinzuf&uuml;gen</li>
+    <li><strong>Filtern:</strong> Nach Mannschaft und Wettbewerb</li>
+  </ul>
+
+  <h3>8.6 Kalender</h3>
+  <ul>
+    <li><strong>Ansichten:</strong> Monats- und Wochenansicht mit Navigation</li>
+    <li><strong>Datenquellen:</strong> Trainings (gr&uuml;n), Spiele (blau), Events (gelb)</li>
+    <li><strong>Detail-Panel:</strong> Rechte Seitenleiste mit Tagesdetails</li>
+    <li><strong>Lokalisierung:</strong> Deutsche Wochentage und Datumsformate</li>
+  </ul>
+
+  <h3>8.7 Kommunikation</h3>
+  <ul>
+    <li><strong>Ank&uuml;ndigungen:</strong> CRUD mit Typ (Allgemein, Training, Spiel, Eltern), Pin-Funktion</li>
+    <li><strong>Erinnerungen:</strong> Automatisch generiert aus kommenden Trainings und Spielen</li>
+  </ul>
+
+  <h3>8.8 Statistiken (Analytics)</h3>
+  <ul>
+    <li><strong>Mannschafts-Tab:</strong> Gesamt-Statistiken, Siege/Unentschieden/Niederlagen, Tore-Vergleich (BarChart)</li>
+    <li><strong>Spieler-Tab:</strong> Top-Torsch&uuml;tzen und Assists (geplant &uuml;ber match_events)</li>
+  </ul>
+
+  <h3>8.9 Einstellungen</h3>
+  <ul>
+    <li><strong>Profil:</strong> Name, E-Mail (readonly), Telefon, Avatar</li>
+    <li><strong>Verein:</strong> Name, Adresse, Stadt, Land, Website (Admin/Manager)</li>
+    <li><strong>Benutzer:</strong> Rollenverwaltung per Dropdown (nur Admin)</li>
+    <li><strong>Benachrichtigungen:</strong> Toggle f&uuml;r Training/Spiel/Ank&uuml;ndigungen</li>
+  </ul>
+</section>
+
+<!-- ============================================================ -->
+<!-- 9. USER FLOW DIAGRAMS -->
+<!-- ============================================================ -->
+<section id="sec9" class="page-break">
+  <h2><span class="section-num">09</span> User Flow Diagrams</h2>
+
+  <h3>9.1 Registrierung &amp; Onboarding</h3>
+  <div class="flow-step"><div class="flow-num">1</div><div class="flow-content"><strong>/register</strong> &mdash; Name, E-Mail, Passwort eingeben</div></div>
+  <div class="flow-connector"></div>
+  <div class="flow-step"><div class="flow-num">2</div><div class="flow-content"><strong>Firebase Auth</strong> &mdash; Account erstellt, Profil in Firestore angelegt (role: manager)</div></div>
+  <div class="flow-connector"></div>
+  <div class="flow-step"><div class="flow-num">3</div><div class="flow-content"><strong>/onboarding</strong> &mdash; Vereinsname und Stadt eingeben</div></div>
+  <div class="flow-connector"></div>
+  <div class="flow-step"><div class="flow-num">4</div><div class="flow-content"><strong>Firestore</strong> &mdash; Club erstellt, User.clubId gesetzt, Role auf admin ge&auml;ndert</div></div>
+  <div class="flow-connector"></div>
+  <div class="flow-step"><div class="flow-num">5</div><div class="flow-content"><strong>/dashboard</strong> &mdash; Leeres Dashboard, bereit zum Einrichten</div></div>
+
+  <h3>9.2 Login Flow</h3>
+  <div class="diagram">
+  /login
+    |
+    +-- Email/Passwort eingeben
+    |     |
+    |     +-- Firebase signInWithEmail()
+    |           |
+    |           +-- Erfolg --> AuthProvider laedt Profil
+    |           |                |
+    |           |                +-- clubId vorhanden? --> /dashboard
+    |           |                +-- clubId null?      --> /onboarding
+    |           |
+    |           +-- Fehler --> Fehlermeldung anzeigen
+    |
+    +-- Demo-Modus klicken
+          |
+          +-- Cookie setzen --> Mock-Daten laden --> /dashboard
+  </div>
+
+  <h3>9.3 Spieler hinzuf&uuml;gen</h3>
+  <div class="flow-step"><div class="flow-num">1</div><div class="flow-content"><strong>/players</strong> &mdash; &quot;Spieler hinzuf&uuml;gen&quot; Button klicken</div></div>
+  <div class="flow-connector"></div>
+  <div class="flow-step"><div class="flow-num">2</div><div class="flow-content"><strong>Modal</strong> &mdash; Name, Position, R&uuml;ckennummer, Teams ausw&auml;hlen</div></div>
+  <div class="flow-connector"></div>
+  <div class="flow-step"><div class="flow-num">3</div><div class="flow-content"><strong>Firestore</strong> &mdash; <code>playersService.create()</code> + <code>playerTeamsService.create()</code> f&uuml;r jedes Team</div></div>
+  <div class="flow-connector"></div>
+  <div class="flow-step"><div class="flow-num">4</div><div class="flow-content"><strong>Echtzeit-Update</strong> &mdash; Spieler erscheint sofort in der Liste (onSnapshot)</div></div>
+
+  <h3>9.4 Training erstellen &amp; Anwesenheit</h3>
+  <div class="diagram">
+  /trainings --> "Training erstellen" Button
+       |
+       v
+  Modal: Team, Datum, Zeit, Ort, Schwerpunkt
+       |
+       v
+  trainingsService.create() --> Echtzeit in Liste
+       |
+       v
+  /trainings/{id} --> Anwesenheits-Tab
+       |
+       v
+  Spieler aus Team laden --> Status setzen:
+    [Anwesend] [Verspaetet] [Verletzt] [Abwesend]
+       |
+       v
+  trainingAttendanceService.create() fuer jeden Spieler
+  </div>
+
+  <h3>9.5 Datenfluss-Diagramm</h3>
+  <div class="diagram">
+  Benutzeraktion (z.B. Spieler erstellen)
+       |
+       v
+  React Component --> Service-Aufruf
+       |                    |
+       v                    v
+  UI zeigt Loading     Firestore addDoc()
+       |                    |
+       v                    v
+  onSnapshot Callback   Server Timestamp
+       |
+       v
+  Zustand Store Update
+       |
+       v
+  React Re-Render --> UI aktualisiert
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 10. USER MANUAL -->
+<!-- ============================================================ -->
+<section id="sec10" class="page-break">
+  <h2><span class="section-num">10</span> User Manual / Bedienungsanleitung</h2>
+
+  <h3>10.1 Erste Schritte</h3>
+  <h4>Schritt 1: Registrierung</h4>
+  <ol>
+    <li>&Ouml;ffne <code>fc-austria-manager.vercel.app</code></li>
+    <li>Klicke auf &quot;Registrieren&quot;</li>
+    <li>Gib deinen Namen, E-Mail und Passwort (min. 6 Zeichen) ein</li>
+    <li>Klicke &quot;Konto erstellen&quot;</li>
+  </ol>
+
+  <h4>Schritt 2: Verein anlegen</h4>
+  <ol>
+    <li>Du wirst automatisch zur Onboarding-Seite weitergeleitet</li>
+    <li>Gib den Vereinsnamen ein (z.B. &quot;FC Austria Wien Jugend&quot;)</li>
+    <li>Optional: Stadt und Land eingeben</li>
+    <li>Klicke &quot;Verein erstellen&quot;</li>
+    <li>Du bist jetzt Admin deines Vereins</li>
+  </ol>
+
+  <div class="screenshot">
+    <div class="icon">&#x1F5BC;</div>
+    <div class="label">Screenshot: Onboarding-Seite</div>
+    <div class="desc">Vereinserstellung mit Name, Stadt und Land</div>
+  </div>
+
+  <h4>Schritt 3: Mannschaft erstellen</h4>
+  <ol>
+    <li>Gehe zu &quot;Teams&quot; in der Sidebar</li>
+    <li>Klicke &quot;Team erstellen&quot;</li>
+    <li>W&auml;hle Name, Kategorie (z.B. U15) und Saison</li>
+    <li>Klicke &quot;Speichern&quot;</li>
+  </ol>
+
+  <h4>Schritt 4: Spieler hinzuf&uuml;gen</h4>
+  <ol>
+    <li>Gehe zu &quot;Spieler&quot; in der Sidebar</li>
+    <li>Klicke &quot;Spieler hinzuf&uuml;gen&quot;</li>
+    <li>F&uuml;lle Name, Position, R&uuml;ckennummer aus</li>
+    <li>W&auml;hle eine oder mehrere Mannschaften</li>
+    <li>Optional: Kontaktdaten und Eltern-Info</li>
+    <li>Klicke &quot;Speichern&quot;</li>
+  </ol>
+
+  <h3>10.2 Training planen</h3>
+  <ol>
+    <li>Gehe zu &quot;Trainings&quot;</li>
+    <li>Klicke &quot;Training erstellen&quot;</li>
+    <li>W&auml;hle Mannschaft, Datum, Start-/Endzeit</li>
+    <li>Gib Ort und Schwerpunkt ein (z.B. &quot;Passspiel&quot;)</li>
+    <li>Klicke &quot;Speichern&quot;</li>
+    <li>Das Training erscheint automatisch im Kalender</li>
+  </ol>
+
+  <h3>10.3 Anwesenheit tracken</h3>
+  <ol>
+    <li>Gehe zu &quot;Trainings&quot; und klicke auf ein Training</li>
+    <li>Wechsle zum &quot;Anwesenheit&quot;-Tab</li>
+    <li>F&uuml;r jeden Spieler den Status setzen: Anwesend / Versp&auml;tet / Verletzt / Abwesend</li>
+    <li>Die Daten werden automatisch in Firestore gespeichert</li>
+  </ol>
+
+  <h3>10.4 Spiel eintragen</h3>
+  <ol>
+    <li>Gehe zu &quot;Spiele&quot;</li>
+    <li>Klicke &quot;Spiel hinzuf&uuml;gen&quot;</li>
+    <li>W&auml;hle Mannschaft und gib Gegner ein</li>
+    <li>Setze Datum, Anstosszeit, Spielort</li>
+    <li>W&auml;hle Heim/Ausw&auml;rts und Wettbewerb</li>
+    <li>Klicke &quot;Speichern&quot;</li>
+  </ol>
+
+  <h3>10.5 Ergebnis &amp; Spielereignisse</h3>
+  <ol>
+    <li>Klicke auf ein Spiel, um die Detailseite zu &ouml;ffnen</li>
+    <li>Klicke &quot;Ergebnis bearbeiten&quot; und gib den Endstand ein</li>
+    <li>Klicke &quot;Ereignis hinzuf&uuml;gen&quot; f&uuml;r Tore, Karten oder Wechsel</li>
+    <li>W&auml;hle Spieler, Typ, Minute und optionale Details</li>
+  </ol>
+
+  <h3>10.6 Ank&uuml;ndigungen erstellen</h3>
+  <ol>
+    <li>Gehe zu &quot;Kommunikation&quot;</li>
+    <li>Klicke &quot;Neue Ank&uuml;ndigung&quot;</li>
+    <li>Gib Titel und Inhalt ein</li>
+    <li>W&auml;hle Typ (Allgemein/Training/Spiel/Eltern)</li>
+    <li>Optional: An bestimmte Mannschaft richten</li>
+    <li>Optional: Ankuendigung anpinnen</li>
+  </ol>
+
+  <div class="info-box success">
+    <strong>Tipp: Demo-Modus</strong>
+    Du kannst die App ohne Registrierung testen! Klicke auf der Login-Seite auf &quot;Demo-Login&quot;, um mit Beispieldaten zu arbeiten.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 11. SECURITY ARCHITECTURE -->
+<!-- ============================================================ -->
+<section id="sec11" class="page-break">
+  <h2><span class="section-num">11</span> Security Architecture</h2>
+
+  <h3>11.1 Authentifizierung</h3>
+  <table>
+    <thead><tr><th>Aspekt</th><th>Implementierung</th></tr></thead>
+    <tbody>
+      <tr><td>Auth-Provider</td><td>Firebase Authentication (Email/Password)</td></tr>
+      <tr><td>Session Management</td><td>Firebase Auth Token (automatisch verwaltet)</td></tr>
+      <tr><td>Token Refresh</td><td>Automatisch durch Firebase SDK</td></tr>
+      <tr><td>Passwort-Policy</td><td>Minimum 6 Zeichen (Firebase Default)</td></tr>
+      <tr><td>Route Protection</td><td>AuthProvider mit onAuthStateChanged Observer</td></tr>
+    </tbody>
+  </table>
+
+  <h3>11.2 Autorisierung (RBAC)</h3>
+  <table>
+    <thead><tr><th>Rolle</th><th>Dashboard</th><th>Teams</th><th>Spieler</th><th>Trainings</th><th>Spiele</th><th>Settings</th></tr></thead>
+    <tbody>
+      <tr><td>Admin</td><td>&#x2705;</td><td>CRUD</td><td>CRUD</td><td>CRUD</td><td>CRUD</td><td>Alles</td></tr>
+      <tr><td>Manager</td><td>&#x2705;</td><td>CRUD</td><td>CRUD</td><td>CRUD</td><td>CRUD</td><td>Verein + Profil</td></tr>
+      <tr><td>Coach</td><td>&#x2705;</td><td>Lesen</td><td>CRUD</td><td>CRUD</td><td>CRUD</td><td>Profil</td></tr>
+      <tr><td>Asst. Coach</td><td>&#x2705;</td><td>Lesen</td><td>Lesen</td><td>Lesen</td><td>Lesen</td><td>Profil</td></tr>
+      <tr><td>Player</td><td>&#x2705;</td><td>Lesen</td><td>Lesen</td><td>Lesen</td><td>Lesen</td><td>Profil</td></tr>
+      <tr><td>Parent</td><td>&#x2705;</td><td>Lesen</td><td>Lesen</td><td>Lesen</td><td>Lesen</td><td>Profil</td></tr>
+    </tbody>
+  </table>
+
+  <h3>11.3 Firestore Security Rules</h3>
+  <pre><code>rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Benutzer: nur eigenes Profil schreiben
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null &amp;&amp; request.auth.uid == userId;
+      allow update: if request.auth != null &amp;&amp; request.auth.uid == userId;
+    }
+    // Alle anderen Collections: authentifiziert = Zugriff
+    match /teams/{docId} { allow read, write: if request.auth != null; }
+    match /players/{docId} { allow read, write: if request.auth != null; }
+    // ... (analog fuer alle 10 weiteren Collections)
+  }
+}</code></pre>
+
+  <h3>11.4 Datenisolierung</h3>
+  <div class="info-box warning">
+    <strong>Aktuelle Implementierung</strong>
+    Die Datenisolierung zwischen Vereinen erfolgt clientseitig &uuml;ber <code>clubId</code>-Filterung. Firestore Rules erlauben jedem authentifizierten Benutzer Lese-/Schreibzugriff auf alle Collections. F&uuml;r Produktionsbetrieb wird empfohlen, serverseitige <code>clubId</code>-Validierung in den Firestore Rules zu implementieren.
+  </div>
+
+  <h3>11.5 Geplante Verbesserungen</h3>
+  <ul>
+    <li>Serverseitige clubId-Validierung in Firestore Rules</li>
+    <li>Rate Limiting &uuml;ber Firebase App Check</li>
+    <li>Multi-Factor Authentication (MFA)</li>
+    <li>Content Security Policy (CSP) Headers</li>
+  </ul>
+</section>
+
+<!-- ============================================================ -->
+<!-- 12. SCALABILITY STRATEGY -->
+<!-- ============================================================ -->
+<section id="sec12" class="page-break">
+  <h2><span class="section-num">12</span> Scalability Strategy</h2>
+
+  <h3>12.1 Aktuelle Architektur-Kapazit&auml;t</h3>
+  <table>
+    <thead><tr><th>Metrik</th><th>Limit</th><th>Quelle</th></tr></thead>
+    <tbody>
+      <tr><td>Gleichzeitige Verbindungen</td><td>1.000.000</td><td>Firestore Limit</td></tr>
+      <tr><td>Dokument-Gr&ouml;&szlig;e</td><td>1 MB</td><td>Firestore Limit</td></tr>
+      <tr><td>Writes/Sekunde</td><td>10.000</td><td>Firestore Limit</td></tr>
+      <tr><td>Reads/Sekunde</td><td>50.000+</td><td>Firestore (auto-scaling)</td></tr>
+      <tr><td>CDN Edge Locations</td><td>Global</td><td>Vercel Edge Network</td></tr>
+    </tbody>
+  </table>
+
+  <h3>12.2 Skalierungsstrategie</h3>
+  <ol>
+    <li><strong>Phase 1 (Aktuell):</strong> Single Firebase Project, Client-Side Rendering, Vercel Hosting</li>
+    <li><strong>Phase 2 (100+ Vereine):</strong> Firebase Security Rules versch&auml;rfen, Pagination f&uuml;r Listen, Firebase App Check</li>
+    <li><strong>Phase 3 (1000+ Vereine):</strong> Cloud Functions f&uuml;r Business Logic, Firestore Sharding, Caching Layer</li>
+    <li><strong>Phase 4 (Enterprise):</strong> Multi-Region Deployment, Dedicated Firebase Projects, Admin Dashboard</li>
+  </ol>
+
+  <h3>12.3 Performance-Optimierungen</h3>
+  <ul>
+    <li><strong>Turbopack</strong> &mdash; Schnellerer Build als Webpack</li>
+    <li><strong>Static Generation</strong> &mdash; 13 von 18 Seiten statisch vorgerendert</li>
+    <li><strong>Real-Time Subscriptions</strong> &mdash; Nur ge&auml;nderte Dokumente werden &uuml;bertragen (delta sync)</li>
+    <li><strong>Zustand</strong> &mdash; Minimale Re-Renders durch selektive State-Updates</li>
+    <li><strong>Composite Indexes</strong> &mdash; 11 Indexes f&uuml;r optimierte Queries</li>
+  </ul>
+</section>
+
+<!-- ============================================================ -->
+<!-- 13. DEVELOPMENT ROADMAP -->
+<!-- ============================================================ -->
+<section id="sec13" class="page-break">
+  <h2><span class="section-num">13</span> Development Roadmap</h2>
+
+  <h3>Version History</h3>
+  <table class="version-table">
+    <thead><tr><th>Version</th><th>Datum</th><th>&Auml;nderungen</th></tr></thead>
+    <tbody>
+      <tr><td>v0.1.0</td><td>Feb 2026</td><td>Initiale Codebase mit Supabase Backend, grundlegende UI</td></tr>
+      <tr><td>v0.2.0</td><td>Feb 2026</td><td>Teams &amp; Players CRUD mit Supabase, Auth Flow</td></tr>
+      <tr><td>v0.3.0</td><td>Feb 2026</td><td>Trainings-Modul mit Anwesenheit</td></tr>
+      <tr><td>v0.5.0</td><td>M&auml;r 2026</td><td>Vollst&auml;ndige Migration von Supabase zu Firebase</td></tr>
+      <tr><td>v1.0.0</td><td>05.03.2026</td><td>Alle Seiten auf Firestore umgestellt, Mock-Daten entfernt, Error Handling, Composite Indexes, Deploy auf Vercel</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Geplante Features (v1.1 &ndash; v2.0)</h3>
+  <table>
+    <thead><tr><th>Feature</th><th>Priorit&auml;t</th><th>Geplant</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Push-Benachrichtigungen (FCM)</td><td><span class="badge badge-red">Hoch</span></td><td>Q2 2026</td><td>Geplant</td></tr>
+      <tr><td>Serverseitige clubId-Rules</td><td><span class="badge badge-red">Hoch</span></td><td>Q2 2026</td><td>Geplant</td></tr>
+      <tr><td>Foto-Upload (Firebase Storage)</td><td><span class="badge badge-amber">Mittel</span></td><td>Q2 2026</td><td>Geplant</td></tr>
+      <tr><td>PDF-Export (Kader, Statistiken)</td><td><span class="badge badge-amber">Mittel</span></td><td>Q2 2026</td><td>Geplant</td></tr>
+      <tr><td>Mobile App (React Native / PWA)</td><td><span class="badge badge-amber">Mittel</span></td><td>Q3 2026</td><td>Konzept</td></tr>
+      <tr><td>Globale Suchfunktion</td><td><span class="badge badge-emerald">Niedrig</span></td><td>Q3 2026</td><td>Geplant</td></tr>
+      <tr><td>Formations-Editor</td><td><span class="badge badge-emerald">Niedrig</span></td><td>Q3 2026</td><td>Konzept</td></tr>
+      <tr><td>Video-Integration</td><td><span class="badge badge-emerald">Niedrig</span></td><td>Q4 2026</td><td>Konzept</td></tr>
+      <tr><td>Multi-Sprache vollst&auml;ndig (EN/SR/TR)</td><td><span class="badge badge-amber">Mittel</span></td><td>Q3 2026</td><td>Infrastruktur vorhanden</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ -->
+<!-- 14. APPENDIX -->
+<!-- ============================================================ -->
+<section id="sec14" class="page-break">
+  <h2><span class="section-num">14</span> Appendix &mdash; Technische Details</h2>
+
+  <h3>A. Environment Variables</h3>
+  <pre><code># .env.local (nicht im Repository)
+NEXT_PUBLIC_FIREBASE_API_KEY=AIza...
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=fc-austria-manager.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=fc-austria-manager
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=fc-austria-manager.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
+NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abc123</code></pre>
+
+  <h3>B. Build &amp; Deploy Befehle</h3>
+  <pre><code># Lokale Entwicklung
+npm run dev
+
+# Produktions-Build
+npm run build
+
+# TypeScript pr&uuml;fen
+npx tsc --noEmit
+
+# Firestore Rules deployen
+npx firebase deploy --only firestore:rules
+
+# Firestore Indexes deployen
+npx firebase deploy --only firestore:indexes
+
+# Git Push (Vercel Auto-Deploy)
+git push origin main</code></pre>
+
+  <h3>C. Utility Functions</h3>
+  <table>
+    <thead><tr><th>Funktion</th><th>Beschreibung</th><th>Beispiel</th></tr></thead>
+    <tbody>
+      <tr><td><code>cn()</code></td><td>Tailwind Class Merge (clsx)</td><td><code>cn('bg-red', isActive &amp;&amp; 'text-white')</code></td></tr>
+      <tr><td><code>formatDate()</code></td><td>Deutsches Datumsformat</td><td><code>&quot;2026-03-05&quot; &rarr; &quot;05.03.2026&quot;</code></td></tr>
+      <tr><td><code>formatTime()</code></td><td>Zeitformat HH:MM</td><td><code>&quot;14:30:00&quot; &rarr; &quot;14:30&quot;</code></td></tr>
+      <tr><td><code>getInitials()</code></td><td>Initialen f&uuml;r Avatar</td><td><code>&quot;Max Hofer&quot; &rarr; &quot;MH&quot;</code></td></tr>
+      <tr><td><code>calculateAge()</code></td><td>Alter aus Geburtsdatum</td><td><code>&quot;2010-05-15&quot; &rarr; 15</code></td></tr>
+      <tr><td><code>getPositionAbbreviation()</code></td><td>Position K&uuml;rzel</td><td><code>&quot;goalkeeper&quot; &rarr; &quot;GK&quot;</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>D. Internationalisierung</h3>
+  <table>
+    <thead><tr><th>Sprache</th><th>Code</th><th>Datei</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Deutsch</td><td>de</td><td>src/i18n/locales/de.json</td><td><span class="badge badge-emerald">Vollst&auml;ndig</span></td></tr>
+      <tr><td>English</td><td>en</td><td>src/i18n/locales/en.json</td><td><span class="badge badge-amber">Teilweise</span></td></tr>
+      <tr><td>Srpski</td><td>sr</td><td>src/i18n/locales/sr.json</td><td><span class="badge badge-amber">Teilweise</span></td></tr>
+      <tr><td>T&uuml;rk&ccedil;e</td><td>tr</td><td>src/i18n/locales/tr.json</td><td><span class="badge badge-amber">Teilweise</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>E. Dateistruktur &mdash; Vollst&auml;ndige Liste</h3>
+  <pre><code>src/
+  app/
+    globals.css
+    layout.tsx
+    page.tsx
+    (auth)/
+      layout.tsx
+      login/page.tsx
+      register/page.tsx
+    (dashboard)/
+      layout.tsx
+      analytics/page.tsx
+      calendar/page.tsx
+      communication/page.tsx
+      dashboard/page.tsx, loading.tsx
+      matches/page.tsx, [id]/page.tsx
+      onboarding/page.tsx
+      players/page.tsx, [id]/page.tsx
+      settings/page.tsx
+      teams/page.tsx, [id]/page.tsx
+      trainings/page.tsx, [id]/page.tsx
+  components/
+    analytics/player-development-chart.tsx
+    layout/app-shell.tsx, header.tsx, sidebar.tsx
+    matches/match-event-item.tsx
+    players/add-player-modal.tsx, delete-player-dialog.tsx,
+            edit-player-modal.tsx, edit-player-stats-modal.tsx,
+            player-stats-bar.tsx
+    providers/auth-provider.tsx
+    teams/create-team-modal.tsx, delete-team-dialog.tsx,
+          edit-team-modal.tsx
+    trainings/attendance-tracker.tsx, create-training-modal.tsx,
+              delete-training-dialog.tsx, edit-training-modal.tsx
+    ui/avatar.tsx, badge.tsx, button.tsx, card.tsx,
+       confirm-dialog.tsx, empty-state.tsx, input.tsx,
+       modal.tsx, select.tsx, slider.tsx, stat-card.tsx
+  i18n/
+    config.ts, use-translation.ts
+    locales/de.json, en.json, sr.json, tr.json
+  lib/
+    demo-data.ts, utils.ts
+    firebase/auth.ts, config.ts, services.ts
+  stores/
+    auth-store.ts, club-store.ts, ui-store.ts
+  types/
+    database.ts</code></pre>
+
+  <h3>F. Externe Links</h3>
+  <table>
+    <thead><tr><th>Ressource</th><th>URL</th></tr></thead>
+    <tbody>
+      <tr><td>Live-App</td><td>https://fc-austria-manager.vercel.app</td></tr>
+      <tr><td>GitHub Repository</td><td>https://github.com/dadakaev10-sketch/FC-Austria-Manager</td></tr>
+      <tr><td>Firebase Console</td><td>https://console.firebase.google.com (Projekt: fc-austria-manager)</td></tr>
+      <tr><td>Vercel Dashboard</td><td>https://vercel.com/dashboard</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</div>
+
+<!-- ================================================================== -->
+<!-- FOOTER -->
+<!-- ================================================================== -->
+<div class="doc-footer">
+  <p><strong>FC Austria Manager &mdash; Technische Dokumentation v1.0.0</strong></p>
+  <p>Erstellt am 05. M&auml;rz 2026 &bull; Projektverantwortlicher: Achmed Dadakaev</p>
+  <p>&copy; 2026 FC Austria Manager. Alle Rechte vorbehalten.</p>
+</div>
+
+</body>
+</html>
