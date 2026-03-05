@@ -154,8 +154,13 @@ export default function MatchesPage() {
       setFormError('Nicht angemeldet. Bitte lade die Seite neu.');
       return;
     }
-    if (!formTeamId || !formOpponent || !formDate || !formTime) {
-      setFormError('Bitte fuelle alle Pflichtfelder (*) aus.');
+    const missing: string[] = [];
+    if (!formTeamId) missing.push('Mannschaft');
+    if (!formOpponent) missing.push('Gegner');
+    if (!formDate) missing.push('Datum');
+    if (!formTime) missing.push('Anstosszeit');
+    if (missing.length > 0) {
+      setFormError(`Fehlende Felder: ${missing.join(', ')} (State-Werte: Team="${formTeamId}", Gegner="${formOpponent}", Datum="${formDate}", Zeit="${formTime}")`);
       return;
     }
 
